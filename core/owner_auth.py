@@ -5,7 +5,7 @@ from pathlib import Path
 POLICY_PATH=Path(__file__).resolve().parent.parent/'config'/'owner_auth.json'
 def policy()->dict:
     try: data=json.loads(POLICY_PATH.read_text(encoding='utf-8'))
-    except (OSError,ValueError): data={'enabled':False,'risks':['critical'],'permissions':[]}
+    except (OSError,ValueError): data={'enabled':False,'risks':[],'permissions':[]}
     return {'enabled':bool(data.get('enabled',False)),'risks':[v for v in data.get('risks',[]) if v in {'medium','high','critical'}],'permissions':[str(v)[:80] for v in data.get('permissions',[])][:50]}
 def save_policy(enabled:bool, risks:list, permissions:list)->dict:
     data={'enabled':bool(enabled),'risks':[v for v in risks if v in {'medium','high','critical'}],'permissions':[str(v)[:80] for v in permissions][:50]}

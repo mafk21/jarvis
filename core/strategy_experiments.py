@@ -15,7 +15,13 @@ def _save(data):
 def set_enabled(enabled:bool):
     data=_load(); data['enabled']=bool(enabled); _save(data)
 def propose(name:str, baseline:str, candidate:str):
-    data=_load(); key=str(name)[:80]; data.setdefault('experiments',{})[key]={'baseline':baseline[:80],'candidate':candidate[:80],'baseline_ok':0,'baseline_total':0,'candidate_ok':0,'candidate_total':0,'state':'running'}; _save(data)
+    key=str(name).strip()[:80]; base=str(baseline).strip()[:80]; choice=str(candidate).strip()[:80]
+    if not key or not base or not choice: raise ValueError('name, baseline, and candidate are required')
+    data=_load(); data.setdefault('experiments',{})[key]={'baseline':base,'candidate':choice,'baseline_ok':0,'baseline_total':0,'candidate_ok':0,'candidate_total':0,'state':'running'}; _save(data)
+def remove(name:str)->bool:
+    data=_load(); key=str(name).strip(); found=data.get('experiments',{}).pop(key,None) is not None
+    if found: _save(data)
+    return found
 def assignment(name:str, subject:str)->str|None:
     data=_load(); row=data.get('experiments',{}).get(name)
     if not data.get('enabled') or not row or row.get('state')!='running': return None

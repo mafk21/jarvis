@@ -1538,7 +1538,8 @@ class ApexHudBridge:
 
         if action == "local_voice_install":
             from core.local_voice_setup import install
-            result=install(); return {"ok":result["ok"],"voice_setup":result.get("diagnostics",{}),"message":"Offline voice stack installed and checked." if result["ok"] else result["error"]}
+            components=data.get("components") if isinstance(data.get("components"),list) else []
+            result=install(components); return {"ok":result["ok"],"voice_setup":result.get("diagnostics",{}),"message":"Selected offline voice components installed and checked." if result["ok"] else result["error"]}
 
         if action == "owner_auth_status":
             from core.owner_auth import available, policy
@@ -1562,6 +1563,16 @@ class ApexHudBridge:
         if action == "strategy_experiments_enable":
             from core.strategy_experiments import set_enabled, snapshot
             set_enabled(bool(data.get("enabled",False))); return {"ok":True,"experiments":snapshot()}
+
+        if action == "strategy_experiment_propose":
+            from core.strategy_experiments import propose, snapshot
+            try: propose(str(data.get("name") or ""),str(data.get("baseline") or ""),str(data.get("candidate") or ""))
+            except ValueError as exc: return {"ok":False,"error":str(exc)}
+            return {"ok":True,"experiments":snapshot(),"message":"Experiment created with the user-provided strategies."}
+
+        if action == "strategy_experiment_remove":
+            from core.strategy_experiments import remove, snapshot
+            found=remove(str(data.get("name") or "")); return {"ok":found,"experiments":snapshot(),"message":"Experiment removed." if found else "Experiment not found."}
 
         if action == "smart_home_status":
             from core.smart_home import status

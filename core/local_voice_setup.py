@@ -1,7 +1,7 @@
 """Bounded installer and hardware diagnostics for the optional offline voice stack."""
 from __future__ import annotations
 import importlib, platform, subprocess, sys, time
-PACKAGES=('openwakeword','faster-whisper','kokoro','piper-tts')
+PACKAGE_BY_COMPONENT={'openwakeword':'openwakeword','faster_whisper':'faster-whisper','kokoro':'kokoro','piper':'piper-tts'}
 def diagnostics()->dict:
     from core.local_voice_profile import snapshot
     profile=snapshot(); audio={'input':False,'output':False,'error':''}
@@ -12,7 +12,13 @@ def diagnostics()->dict:
     try: cuda=bool(importlib.import_module('ctranslate2').get_cuda_device_count())
     except Exception: pass
     return {**profile,'audio':audio,'hardware':{'platform':platform.system(),'machine':platform.machine(),'cuda':cuda,'recommended_stt':'faster_whisper' if cuda else 'moonshine_or_small_whisper'}}
-def install()->dict:
-    started=time.monotonic(); command=[sys.executable,'-m','pip','install','--disable-pip-version-check',*PACKAGES]
+def install(components:list[str])->dict:
+    chosen=[]
+    for component in components:
+        key=str(component).strip().lower()
+        if key in PACKAGE_BY_COMPONENT and key not in chosen: chosen.append(key)
+    if not chosen: return {'ok':False,'elapsed_s':0,'diagnostics':diagnostics(),'error':'Select at least one offline voice component.'}
+    packages=[PACKAGE_BY_COMPONENT[key] for key in chosen]
+    started=time.monotonic(); command=[sys.executable,'-m','pip','install','--disable-pip-version-check',*packages]
     completed=subprocess.run(command,capture_output=True,text=True,timeout=900)
     return {'ok':completed.returncode==0,'elapsed_s':round(time.monotonic()-started,1),'diagnostics':diagnostics(),'error':'' if completed.returncode==0 else 'Package installer failed; inspect local pip logs.'}
