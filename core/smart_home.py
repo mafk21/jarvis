@@ -49,7 +49,8 @@ def call(base_url:str, token:str, service:str, entity_id:str, data:dict|None=Non
     if service not in ALLOWED_SERVICES: raise ValueError('service is not allowlisted')
     if not entity_id or any(ch in entity_id for ch in '\r\n\0'): raise ValueError('invalid entity id')
     config=_load(); allowed=config.get('entities',[])
-    if allowed and entity_id not in allowed: raise PermissionError('entity is not allowed')
+    configured_call=(config.get('url')==base_url.rstrip('/') and config.get('token')==token)
+    if configured_call and entity_id not in allowed: raise PermissionError('entity is not allowed')
     before=state(entity_id) if config.get('url')==base_url.rstrip('/') and config.get('token')==token else {}
     domain,action=service.split('.',1); payload={'entity_id':entity_id,**(data or {})}
     req=urllib.request.Request(f"{base_url.rstrip('/')}/api/services/{domain}/{action}",data=json.dumps(payload).encode(),headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'},method='POST')
