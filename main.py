@@ -1003,8 +1003,13 @@ class JarvisLive:
         )
         self.ui.retry_live_connection = self.request_connection_retry
         from core.ambient_hotkey import SilentAskHotkey
-        self._silent_ask_hotkey = SilentAskHotkey(self.ui.open_silent_ask)
-        self._silent_ask_scope = self._silent_ask_hotkey.start()
+        _open_silent_ask = getattr(self.ui, "open_silent_ask", None)
+        self._silent_ask_hotkey = SilentAskHotkey(
+            _open_silent_ask if callable(_open_silent_ask) else (lambda: None)
+        )
+        self._silent_ask_scope = (
+            self._silent_ask_hotkey.start() if callable(_open_silent_ask) else "unavailable"
+        )
         self._retry_connection_requested = threading.Event()
         self._reconnect_event: asyncio.Event | None = None
         self._reconnect_keep = True   # False → next rebuild drops the resumption handle
