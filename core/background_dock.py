@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QComboBox,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -137,12 +138,14 @@ class BackgroundDockWidget(QWidget):
         on_toggle_mute: Callable[[], None] | None = None,
         on_restore_full: Callable[[], None] | None = None,
         on_interrupt: Callable[[], None] | None = None,
+        on_crop_question: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(None)
         self._on_send_text = on_send_text
         self._on_toggle_mute = on_toggle_mute
         self._on_restore_full = on_restore_full
         self._on_interrupt = on_interrupt
+        self._on_crop_question = on_crop_question
 
         self.setWindowTitle("JARVIS Mini Dock")
         self.setWindowFlags(
@@ -292,6 +295,15 @@ class BackgroundDockWidget(QWidget):
         inp_row.setContentsMargins(0, 0, 0, 0)
         inp_row.setSpacing(7)
 
+        self._mode = QComboBox(self._panel)
+        self._mode.addItem("General", "general")
+        self._mode.addItem("Screen", "screen")
+        self._mode.addItem("Crop", "crop")
+        self._mode.addItem("Agent", "agent")
+        self._mode.setToolTip("Choose what context JARVIS may use")
+        self._mode.setFixedHeight(36)
+        inp_row.addWidget(self._mode)
+
         self._input = QLineEdit(self._panel)
         self._input.setPlaceholderText("Type to JARVIS… (mic & voice still active)")
         self._input.setFixedHeight(36)
@@ -381,6 +393,10 @@ class BackgroundDockWidget(QWidget):
                 background: rgba(255, 255, 255, 0.08);
             }}
             """
+        )
+        self._mode.setStyleSheet(
+            f"QComboBox {{ background: rgba(255,255,255,0.055); border: 1px solid {pri_hex}44; "
+            "border-radius: 16px; padding: 0 8px; color: #f4f6fa; }}"
         )
         self._send_btn.setStyleSheet(
             f"""
@@ -600,7 +616,17 @@ class BackgroundDockWidget(QWidget):
         if not msg:
             return
         self._input.clear()
-        if callable(self._on_send_text):
+        mode = str(self._mode.currentData() or "general")
+        if mode == "crop" and callable(self._on_crop_question):
+            self._on_crop_question(msg)
+            self.collapse()
+        elif callable(self._on_send_text):
+            if mode == "general":
+                msg = "Answer without inspecting the screen or camera: " + msg
+            elif mode == "screen":
+                msg = "Use screen_process on the current screen to answer: " + msg
+            elif mode == "agent":
+                msg = "Perform this as a computer task, preserving confirmation rules: " + msg
             self._on_send_text(msg)
         self._input.setFocus(Qt.FocusReason.OtherFocusReason)
 

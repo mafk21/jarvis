@@ -5681,6 +5681,16 @@ class MainWindow(QMainWindow):
         self.write_log(f"SYS: Region {x},{y} {w}x{h} — capturing…")
         # store last region for repeat
         self._last_region = (int(x), int(y), int(w), int(h))
+        # A Silent Ask Crop request carries its question through selection.
+        pending_question = str(getattr(self, "_pending_region_question", "") or "").strip()
+        self._pending_region_question = ""
+        if pending_question and callable(self.on_text_command):
+            prompt = (
+                f"Use screen_process with angle region and region "
+                f"x={int(x)}, y={int(y)}, w={int(w)}, h={int(h)} to answer: {pending_question}"
+            )
+            threading.Thread(target=self.on_text_command, args=(prompt,), daemon=True).start()
+            return
         # ask JarvisLive to capture it via screen_process tool path
         # We synthesize the tool call if the LLM path is not available, otherwise just log a hint
         try:
@@ -6223,6 +6233,7 @@ class JarvisUI:
         self.root = _RootShim(self._app)
         self._apex_bridge = None
         self._bg_dock = None
+        self._edge_signal = None
         self._classic_mode = False
         self._embedded_hud = False
         self._pending_text_commands: list[str] = []
@@ -6343,6 +6354,7 @@ class JarvisUI:
                 on_toggle_mute=self._toggle_mute_from_dock,
                 on_restore_full=self.exit_background_mode,
                 on_interrupt=self._interrupt_from_dock,
+                on_crop_question=self._crop_question_from_dock,
             )
             raw_state = "LISTENING"
             if self._apex_bridge is not None:
@@ -6445,6 +6457,20 @@ class JarvisUI:
             self._win._bridge_call_sig.emit(_do)
         except Exception:
             pass
+
+    def open_silent_ask(self) -> None:
+        """Thread-safe compact typed assistant entry point from any application."""
+        def _open():
+            dock = self._ensure_bg_dock()
+            dock.show_collapsed_in_corner()
+            dock.expand()
+        self._win._bridge_call_sig.emit(_open)
+
+    def _crop_question_from_dock(self, question: str) -> None:
+        def _pick():
+            self._win._pending_region_question = str(question or "What is this?")
+            self._win._start_region_pick()
+        self._win._bridge_call_sig.emit(_pick)
 
     def send_text_from_dock(self, text: str) -> None:
         """Submit typed text from the bottom-right background dock into JARVIS."""
@@ -6724,6 +6750,15 @@ class JarvisUI:
 
     def set_state(self, state: str):
         self._win._state_sig.emit(state)
+        try:
+            def _edge():
+                if self._edge_signal is None:
+                    from core.edge_signal import EdgeSignal
+                    self._edge_signal = EdgeSignal()
+                self._edge_signal.show_state(str(state))
+            self._win._bridge_call_sig.emit(_edge)
+        except Exception:
+            pass
         if self._bg_dock is not None:
             try:
                 self._win._bridge_call_sig.emit(
