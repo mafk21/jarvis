@@ -159,6 +159,8 @@ def user_profile(memory: dict | None = None) -> dict:
     identity = memory.get("identity", {}) or {}
     profile: dict[str, str] = {}
     for field in _IDENTITY_FIELDS:
+        if isinstance(identity.get(field), dict) and _memory_lifecycle(identity[field]) == "archived":
+            continue
         if isinstance(identity.get(field), dict) and identity[field].get("status") == "conflicted":
             continue
         val = _entry_value(identity.get(field))
@@ -487,6 +489,8 @@ def format_memory_for_prompt(memory: dict | None) -> str:
         else:
             core_lines.append(f"{field.title()}: {val}")
     for key, entry in identity.items():
+        if isinstance(entry, dict) and _memory_lifecycle(entry) == "archived":
+            continue
         if key in _IDENTITY_FIELDS or (isinstance(entry, dict) and entry.get("status") == "conflicted"):
             continue
         val = _entry_value(entry)
@@ -497,6 +501,8 @@ def format_memory_for_prompt(memory: dict | None) -> str:
     rest: list[tuple[str, str, str, str]] = []   # (updated, cat, key, value)
     for cat in _CATEGORY_LABELS:
         for key, entry in (memory.get(cat, {}) or {}).items():
+            if isinstance(entry, dict) and _memory_lifecycle(entry) == "archived":
+                continue
             val = _entry_value(entry)
             if not val:
                 continue
@@ -617,6 +623,8 @@ def search_memory(query: str, limit: int = 8) -> str:
         if not isinstance(items, dict):
             continue
         for key, entry in items.items():
+            if isinstance(entry, dict) and _memory_lifecycle(entry) == "archived":
+                continue
             val = _entry_value(entry)
             if not val:
                 continue
@@ -650,6 +658,59 @@ def search_memory(query: str, limit: int = 8) -> str:
     return head + "\n" + "\n".join(lines) + more
 
 
+def _memory_lifecycle(entry: dict) -> str:
+    if not isinstance(entry, dict):
+        return "active"
+    explicit = str(entry.get("lifecycle") or "").lower()
+    if explicit in {"active", "core", "recent", "archived"}:
+        return explicit
+    if entry.get("pinned"):
+        return "core"
+    updated = str(entry.get("updated_at") or entry.get("updated") or "")[:10]
+    try:
+        if (date.today() - date.fromisoformat(updated)).days <= 30:
+            return "recent"
+    except ValueError:
+        pass
+    return "active"
+
+
+def set_memory_lifecycle(category: str, key: str, lifecycle: str) -> str:
+    lifecycle = str(lifecycle or "").lower()
+    if lifecycle not in {"active", "core", "recent", "archived"}:
+        raise ValueError("lifecycle must be active, core, recent, or archived")
+    memory = load_memory()
+    entry = memory.get(category, {}).get(key)
+    if not isinstance(entry, dict):
+        raise KeyError("Memory not found")
+    entry["lifecycle"] = lifecycle
+    entry["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    if lifecycle == "core":
+        entry["pinned"] = True
+    elif entry.get("pinned"):
+        entry["pinned"] = False
+    with _lock:
+        _atomic_write(memory)
+    return lifecycle
+
+
+def edit_memory(category: str, key: str, value: str) -> str:
+    value = str(value or "").strip()
+    if not value:
+        raise ValueError("Memory value cannot be empty")
+    memory = load_memory()
+    entry = memory.get(category, {}).get(key)
+    if not isinstance(entry, dict):
+        raise KeyError("Memory not found")
+    entry["value"] = value[:MAX_VALUE_LENGTH]
+    entry["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    entry["source"] = "user_edit"
+    entry["confidence"] = 1.0
+    with _lock:
+        _atomic_write(memory)
+    return entry["value"]
+
+
 def all_entries_for_ui() -> list[dict]:
     """Flat list for the memory panel: what JARVIS knows, and when it learned it.
     Sorted newest first so the panel opens on what changed most recently."""
@@ -672,6 +733,7 @@ def all_entries_for_ui() -> list[dict]:
                 "status": (entry.get("status", "active") if isinstance(entry, dict) else "legacy"),
                 "sensitivity": (entry.get("sensitivity", "personal") if isinstance(entry, dict) else "personal"),
                 "pinned": bool(entry.get("pinned", False)) if isinstance(entry, dict) else False,
+                "lifecycle": _memory_lifecycle(entry),
                 "expires_at": (entry.get("expires_at") if isinstance(entry, dict) else None),
             })
     rows.sort(key=lambda r: (r["updated"] or "0000-00-00"), reverse=True)

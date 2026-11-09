@@ -1602,16 +1602,97 @@ class ApexHudBridge:
                 return {"ok": False, "error": str(exc)}
             return {"ok": True, "routing": routing}
 
+        if action == "gaming_mode_get":
+            from core.gaming_mode import refresh
+            return {"ok": True, "gaming": refresh()}
+
+        if action == "gaming_mode_save":
+            from core.gaming_mode import refresh, save_policy
+            games = data.get("games") or []
+            if isinstance(games, str):
+                games = [line.strip() for line in games.splitlines()]
+            if not isinstance(games, list):
+                return {"ok": False, "error": "Games must be a list."}
+            save_policy(bool(data.get("enabled", False)), games)
+            return {"ok": True, "gaming": refresh(), "message": "Gaming Mode policy saved."}
+
+        if action == "vision_policy_get":
+            from core.vision_policy import get_policy, history
+            return {"ok": True, "policy": get_policy(), "history": history(100)}
+
+        if action == "vision_policy_save":
+            from core.vision_policy import save_policy
+            blocked = data.get("blocked_apps") or []
+            if isinstance(blocked, str):
+                blocked = [line.strip() for line in blocked.splitlines()]
+            if not isinstance(blocked, list):
+                return {"ok": False, "error": "Blocked applications must be a list."}
+            policy = save_policy(
+                deny_all=bool(data.get("deny_all", False)),
+                block_sensitive_defaults=bool(data.get("block_sensitive_defaults", True)),
+                blocked_apps=blocked,
+            )
+            return {"ok": True, "policy": policy, "message": "Screen and camera policy saved."}
+
+        if action == "vision_history_clear":
+            from core.vision_policy import clear_history
+            clear_history()
+            return {"ok": True, "message": "Local access history cleared."}
+
+        if action == "incognito_status":
+            from core.session_privacy import status
+            return {"ok": True, "incognito": status()}
+
+        if action == "incognito_set":
+            from core.session_privacy import set_enabled, status
+            active = set_enabled(bool(data.get("enabled", False)))
+            callback = getattr(self._ui, "on_incognito_change", None) if self._ui is not None else None
+            if callable(callback):
+                threading.Thread(target=callback, args=(active,), daemon=True).start()
+            return {
+                "ok": True,
+                "incognito": status(),
+                "message": (
+                    "Incognito is active. A fresh private voice session is starting."
+                    if active else "Incognito is off. A fresh standard voice session is starting."
+                ),
+            }
+
+        if action == "experience_profile_get":
+            from core.experience import public_profile
+            return {"ok": True, "profile": public_profile()}
+
+        if action == "experience_profile_save":
+            from dataclasses import asdict
+            from core.experience import save_profile
+            try:
+                profile = save_profile(
+                    personality=str(data.get("personality") or ""),
+                    language=str(data.get("language") or ""),
+                )
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
+            return {
+                "ok": True,
+                "profile": asdict(profile),
+                "message": "Personality saved. It takes effect on the next voice session.",
+            }
+
         if action == "proactive_policy_get":
             from dataclasses import asdict
-            from core.proactive_permissions import load
-            return {"ok": True, "policy": asdict(load())}
+            from core.proactive_permissions import history, load
+            return {"ok": True, "policy": asdict(load()), "history": history()}
+
+        if action == "proactive_history_clear":
+            from core.proactive_permissions import clear_history
+            clear_history()
+            return {"ok": True, "message": "Proactive activity history cleared."}
 
         if action == "proactive_policy_save":
             from core.proactive_permissions import ProactivePolicy, save
             try:
                 policy = ProactivePolicy(
-                    enabled=bool(data.get("enabled", True)),
+                    enabled=bool(data.get("enabled", False)),
                     use_memory=bool(data.get("use_memory", False)),
                     use_monitors=bool(data.get("use_monitors", False)),
                     use_recent_conversation=bool(data.get("use_recent_conversation", True)),
@@ -1667,6 +1748,26 @@ class ApexHudBridge:
             snap = timeline.get_brain_snapshot()
             self._broadcast_threadsafe(self.snapshot())
             return {"ok": True, "brain": snap}
+
+        if action == "brain_edit_memory":
+            cat = str(data.get("category") or "notes").strip().lower()
+            key = str(data.get("key") or "").strip()
+            try:
+                value = mm.edit_memory(cat, key, str(data.get("value") or ""))
+            except (KeyError, ValueError) as exc:
+                return {"ok": False, "error": str(exc)}
+            self._broadcast_threadsafe(self.snapshot())
+            return {"ok": True, "value": value, "memories": mm.all_entries_for_ui()}
+
+        if action == "brain_set_memory_lifecycle":
+            cat = str(data.get("category") or "notes").strip().lower()
+            key = str(data.get("key") or "").strip()
+            try:
+                lifecycle = mm.set_memory_lifecycle(cat, key, str(data.get("lifecycle") or ""))
+            except (KeyError, ValueError) as exc:
+                return {"ok": False, "error": str(exc)}
+            self._broadcast_threadsafe(self.snapshot())
+            return {"ok": True, "lifecycle": lifecycle, "memories": mm.all_entries_for_ui()}
 
         if action == "brain_pin_memory":
             from memory import memory_governance

@@ -10,7 +10,7 @@ def test_proven_hud_loads_additive_capability_overlay():
 def test_capability_console_covers_secure_backend_controls():
     html=(STATIC/'capabilities.html').read_text(encoding='utf-8')
     js=(STATIC/'capability-console.js').read_text(encoding='utf-8')
-    for action in ('browser_companion_pair','browser_companion_revoke','smart_home_configure','smart_home_discover','smart_home_undo','local_voice_diagnostics','local_voice_install','owner_auth_save','strategy_experiments_enable','workflow_review_status','phone_device_revoke','phone_devices_revoke_all'):
+    for action in ('gaming_mode_get','gaming_mode_save','proactive_history_clear','brain_edit_memory','brain_set_memory_lifecycle','vision_policy_get','vision_policy_save','vision_history_clear','incognito_status','incognito_set','experience_profile_get','experience_profile_save','browser_companion_pair','browser_companion_revoke','smart_home_configure','smart_home_discover','smart_home_undo','local_voice_diagnostics','local_voice_install','owner_auth_save','strategy_experiments_enable','workflow_review_status','phone_device_revoke','phone_devices_revoke_all'):
         assert action in html or action in js
     assert "type=\"password\"" in html
     assert "confirm(b.dataset.confirm)" in js

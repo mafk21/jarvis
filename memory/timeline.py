@@ -121,6 +121,12 @@ def append_turn(
     text = (content or "").strip()
     if not text:
         return None
+    try:
+        from core.session_privacy import enabled as incognito_enabled
+        if incognito_enabled():
+            return None
+    except Exception:
+        pass
     if not force and not cfg.get_timeline_persistence_enabled():
         return None
 

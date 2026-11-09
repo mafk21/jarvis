@@ -17,9 +17,9 @@ def test_private_context_requires_explicit_scopes(monkeypatch, tmp_path):
 
 def test_quiet_hours_and_disable_fail_closed(monkeypatch, tmp_path):
     isolate(monkeypatch, tmp_path)
-    assert not pp.allowed(pp.ProactivePolicy(), datetime(2026, 1, 1, 2))
+    assert not pp.allowed(pp.ProactivePolicy(enabled=True), datetime(2026, 1, 1, 2))
     assert not pp.allowed(pp.ProactivePolicy(enabled=False), datetime(2026, 1, 1, 12))
-    assert pp.allowed(pp.ProactivePolicy(), datetime(2026, 1, 1, 12))
+    assert pp.allowed(pp.ProactivePolicy(enabled=True), datetime(2026, 1, 1, 12))
 
 
 def test_legacy_policy_migrates_and_corrupt_or_future_policy_fails_closed(monkeypatch, tmp_path):
@@ -34,7 +34,7 @@ def test_legacy_policy_migrates_and_corrupt_or_future_policy_fails_closed(monkey
 
 def test_minimum_urgency_is_enforced(monkeypatch, tmp_path):
     isolate(monkeypatch, tmp_path)
-    policy = pp.ProactivePolicy(minimum_urgency="high")
+    policy = pp.ProactivePolicy(enabled=True, minimum_urgency="high")
     now = datetime(2026, 1, 1, 12)
     assert not pp.allowed(policy, now, urgency="normal")
     assert pp.allowed(policy, now, urgency="high")
@@ -43,7 +43,7 @@ def test_minimum_urgency_is_enforced(monkeypatch, tmp_path):
 def test_daily_budget_is_durable(monkeypatch, tmp_path):
     isolate(monkeypatch, tmp_path)
     now = datetime(2026, 1, 1, 12)
-    policy = pp.ProactivePolicy(daily_limit=2)
+    policy = pp.ProactivePolicy(enabled=True, daily_limit=2)
     assert pp.allowed(policy, now)
     pp.record(now); assert pp.allowed(policy, now)
     pp.record(now); assert not pp.allowed(policy, now)

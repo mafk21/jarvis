@@ -11,7 +11,8 @@ _LOCK = threading.Lock()
 
 @dataclass(frozen=True)
 class ProactivePolicy:
-    enabled: bool = True
+    # Unsolicited monitoring must be explicitly enabled by the owner.
+    enabled: bool = False
     use_memory: bool = False
     use_monitors: bool = False
     use_recent_conversation: bool = True
@@ -45,6 +46,15 @@ def save(policy: ProactivePolicy) -> None:
 
 def allowed(policy: ProactivePolicy | None = None, now: datetime | None = None, urgency: str = "normal") -> bool:
     p = policy or load(); current = now or datetime.now()
+    try:
+        from core.session_privacy import enabled as incognito_enabled
+        if incognito_enabled():
+            return False
+        from core.gaming_mode import active as gaming_active
+        if gaming_active():
+            return False
+    except Exception:
+        pass
     if not p.enabled or p.daily_limit <= 0: return False
     levels = {"low": 0, "normal": 1, "high": 2, "critical": 3}
     if levels.get(str(urgency).lower(), 1) < levels.get(p.minimum_urgency, 1): return False
@@ -66,10 +76,29 @@ def record(now: datetime | None = None) -> None:
         try: usage = json.loads(USAGE_PATH.read_text(encoding="utf-8"))
         except (OSError, ValueError): usage = {}
         count = int(usage.get("count", 0)) + 1 if usage.get("date") == day else 1
+        events = list(usage.get("events", [])) if isinstance(usage.get("events"), list) else []
+        events.append({"at": current.astimezone().isoformat(timespec="seconds"), "event": "suggestion delivered"})
+        events = events[-100:]
         USAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
         temp = USAGE_PATH.with_suffix(".tmp")
-        temp.write_text(json.dumps({"date": day, "count": count}), encoding="utf-8")
+        temp.write_text(json.dumps({"date": day, "count": count, "events": events}), encoding="utf-8")
         os.replace(temp, USAGE_PATH)
+
+
+def history() -> list[dict]:
+    try:
+        raw = json.loads(USAGE_PATH.read_text(encoding="utf-8"))
+        events = raw.get("events", [])
+        return list(reversed(events[-100:])) if isinstance(events, list) else []
+    except (OSError, ValueError, TypeError):
+        return []
+
+
+def clear_history() -> None:
+    try:
+        USAGE_PATH.unlink()
+    except FileNotFoundError:
+        pass
 
 
 def filter_context(memory: dict, monitors: list[str] | None, recent: list[str] | None,

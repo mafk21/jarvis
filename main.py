@@ -997,7 +997,19 @@ class JarvisLive:
         self.ui.on_voice_change   = self._on_voice_change     # voice picker → rebuild session
         self.ui.on_audio_device_change = self._on_audio_device_change
         self.ui.on_integrations_change = self._on_integrations_change
+        self.ui.on_incognito_change = self._on_incognito_change
+        self.ui.on_experience_change = lambda: self.request_reconnect(
+            keep_context=False, reason="presentation style"
+        )
         self.ui.retry_live_connection = self.request_connection_retry
+        from core.ambient_hotkey import SilentAskHotkey
+        _open_silent_ask = getattr(self.ui, "open_silent_ask", None)
+        self._silent_ask_hotkey = SilentAskHotkey(
+            _open_silent_ask if callable(_open_silent_ask) else (lambda: None)
+        )
+        self._silent_ask_scope = (
+            self._silent_ask_hotkey.start() if callable(_open_silent_ask) else "unavailable"
+        )
         self._retry_connection_requested = threading.Event()
         self._reconnect_event: asyncio.Event | None = None
         self._reconnect_keep = True   # False → next rebuild drops the resumption handle
@@ -1022,6 +1034,14 @@ class JarvisLive:
         self._briefing_sent    = False          # morning briefing fires once per process
         self._sys_monitor      = SystemMonitor()  # persistent cooldown state
         self._proactive        = ProactiveEngine()
+        from core.gaming_mode import GamingModeMonitor
+        self._gaming_monitor = GamingModeMonitor(
+            lambda state: self.ui.write_log(
+                "SYS: Gaming Mode active — proactive interruptions paused; direct JARVIS requests remain available."
+                if state.get("active") else "SYS: Gaming Mode ended — normal proactive policy restored."
+            )
+        )
+        self._gaming_monitor.start()
         self._heartbeat        = HeartbeatEngine()   # Phase 4: observe/suggest/act + HEARTBEAT_OK + never-nag-twice
         self._screen_memory    = get_screen_memory()   # Phase 7: screen memory (event-driven capture + FTS5 search)
         self._session_recycler = SessionRecycler()     # Phase 13: proactive 15-min WebSocket recycle
@@ -1577,6 +1597,20 @@ class JarvisLive:
         """Connected accounts updated mid-session — refresh system prompt silently."""
         self.request_reconnect(keep_context=True, reason="integrations", silent=True)
 
+    def _on_incognito_change(self, enabled: bool):
+        """Apply privacy immediately and discard server-side conversation context.
+
+        Blocking capture/persistence is immediate. A fresh Live session ensures
+        context loaded before Incognito was enabled is no longer available.
+        Disabling also starts fresh so private-session content cannot cross back.
+        """
+        self.interrupt()
+        self._session_log = []
+        self.request_reconnect(
+            keep_context=False,
+            reason="Incognito on" if enabled else "Incognito off",
+        )
+
     async def _watch_reconnect(self):
         """Session-scoped task: when a voluntary reconnect is requested, raise a
         signal that unwinds the TaskGroup so the run loop rebuilds the session."""
@@ -1681,9 +1715,52 @@ class JarvisLive:
         if not self.ui.muted and not self._paused:
             self.ui.set_state("LISTENING")
 
+    def _apply_experience_command(self, text: str) -> bool:
+        """Apply explicit privacy/personality requests without sending them to a model."""
+        normalized = " ".join((text or "").casefold().strip().rstrip(".!?").split())
+        incognito_on = {"turn on incognito", "enable incognito", "go incognito", "private session"}
+        incognito_off = {"turn off incognito", "disable incognito", "leave incognito", "end private session"}
+        if normalized in incognito_on | incognito_off:
+            from core.session_privacy import set_enabled
+            active = normalized in incognito_on
+            set_enabled(active)
+            self.ui.write_log(f"SYS: Incognito {'on' if active else 'off'}.")
+            self._on_incognito_change(active)
+            return True
+
+        from core.experience import load_profile, save_profile
+        profile = load_profile()
+        personality_aliases = {
+            "switch to command": "command", "use command": "command",
+            "switch to inventor": "inventor", "use inventor": "inventor",
+            "switch to sentinel": "sentinel", "use sentinel": "sentinel",
+            "switch to companion": "companion", "use companion": "companion",
+            "be less energetic": "command",
+        }
+        language_aliases = {
+            "keep it clean": "clean", "don't swear": "clean", "do not swear": "clean",
+            "you can swear around me": "adult", "adult language on": "adult",
+            "keep profanity casual": "casual", "casual language": "casual",
+        }
+        personality = personality_aliases.get(normalized)
+        language = language_aliases.get(normalized)
+        if personality or language:
+            saved = save_profile(
+                personality=personality or profile.personality,
+                language=language or profile.language,
+            )
+            self.ui.write_log(
+                f"SYS: Presentation set to {saved.personality.title()} · {saved.language.title()}."
+            )
+            self.request_reconnect(keep_context=False, reason="presentation style")
+            return True
+        return False
+
     def _on_text_command(self, text: str):
         text = (text or "").strip()
         if not text:
+            return
+        if self._apply_experience_command(text):
             return
         # Explicitly typing to JARVIS wakes it if wake-word sleep was active
         if self._wake_enabled and not self._awake:
@@ -1911,8 +1988,13 @@ class JarvisLive:
             self._asst_name = "JARVIS"
             _user_name = ""
 
-        memory     = load_memory()
-        mem_str    = format_memory_for_prompt(memory)
+        try:
+            from core.session_privacy import enabled as _incognito_enabled
+            _private_session = _incognito_enabled()
+        except Exception:
+            _private_session = False
+        memory     = {} if _private_session else load_memory()
+        mem_str    = "" if _private_session else format_memory_for_prompt(memory)
         sys_prompt = _load_system_prompt()
 
         now      = datetime.now()
@@ -1991,6 +2073,19 @@ class JarvisLive:
         except Exception as exc:
             print(f"[Soul] Legacy prompt reconciliation failed safely: {type(exc).__name__}: {exc}")
         parts = [time_ctx, soul_ctx if soul_ctx else identity_ctx]
+        if _private_session:
+            parts.append(
+                "[INCOGNITO SESSION]\nDo not save or recall personal memory, saved chat, screen, or camera context. "
+                "Do not offer proactive help. Existing stored data is outside this session.\n"
+            )
+        # Presentation is user-owned and deliberately separate from edition,
+        # capability, and safety. Invalid/missing settings fail to the clean,
+        # concise Command profile.
+        try:
+            from core.experience import prompt_context as _experience_prompt
+            parts.append(_experience_prompt())
+        except Exception:
+            pass
         # Shared by Gemini Live and the OpenAI adapters: retain discoverability after restarts.
         try:
             from core.topic_learning import prompt_index
@@ -2200,6 +2295,25 @@ class JarvisLive:
                 )
         except Exception:
             pass
+
+        if name in {"save_memory", "recall_memory", "screen_process"}:
+            try:
+                from core.session_privacy import deny_message, enabled as incognito_enabled
+                if incognito_enabled():
+                    capability = {
+                        "save_memory": "new memories",
+                        "recall_memory": "memory recall",
+                        "screen_process": "screen and camera capture",
+                    }[name]
+                    result = deny_message(capability)
+                    _nf = getattr(self.ui, "notify_tool_finish", None)
+                    if callable(_nf):
+                        _nf(_task_id, result, "failed")
+                    if not self.ui.muted:
+                        self.ui.set_state("LISTENING")
+                    return types.FunctionResponse(id=fc.id, name=name, response={"result": result})
+            except Exception:
+                pass
 
         if name == "save_memory":
             category = args.get("category", "notes")
@@ -3402,6 +3516,13 @@ class JarvisLive:
 
     async def _save_session_summary(self) -> None:
         """Summarise the current session in 1-2 sentences and save to long_term.json."""
+        try:
+            from core.session_privacy import enabled as incognito_enabled
+            if incognito_enabled():
+                self._session_log = []
+                return
+        except Exception:
+            pass
         log = self._session_log
         if len(log) < 3:          # need at least one exchange to be worth saving
             return

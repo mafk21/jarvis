@@ -94,8 +94,15 @@ def _compress(img_bytes: bytes, source_format: str = "PNG") -> tuple[bytes, str]
         return img_bytes, f"image/{source_format.lower()}"
 
 
-def _capture_screen() -> tuple[bytes, str]:
+def _require_access(capability: str) -> None:
+    from core.vision_policy import authorize
+    allowed, reason = authorize(capability, cloud_possible=True)
+    if not allowed:
+        raise PermissionError(reason)
 
+
+def _capture_screen() -> tuple[bytes, str]:
+    _require_access("screen")
     if not _MSS:
         raise RuntimeError("mss is not installed. Run: pip install mss")
 
@@ -110,6 +117,7 @@ def _capture_screen() -> tuple[bytes, str]:
 
 def _capture_region(x: int, y: int, w: int, h: int) -> tuple[bytes, str]:
     """Capture a screen region (x,y origin top-left). Used for 'ask about part of screen'."""
+    _require_access("screen_region")
     if not _MSS:
         raise RuntimeError("mss is not installed. Run: pip install mss")
     # sanitize
@@ -190,6 +198,7 @@ def _get_camera_index() -> int:
 
 
 def _capture_camera() -> tuple[bytes, str]:
+    _require_access("camera")
     if not _CV2:
         raise RuntimeError("OpenCV (cv2) is not installed. Run: pip install opencv-python")
 

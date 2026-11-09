@@ -44,13 +44,13 @@ DEFAULT_CHORD = ("ctrl", "space")
 _VK = {
     "ctrl": 0x11, "shift": 0x10, "alt": 0x12,
     "space": 0x20, "f8": 0x77, "f9": 0x78, "f10": 0x79,
-    "capslock": 0x14, "insert": 0x2D,
+    "capslock": 0x14, "insert": 0x2D, "s": 0x53,
 }
 
 # Qt key sequence text for the same chord, used by the windowed fallback.
 _QT_NAME = {"ctrl": "Ctrl", "shift": "Shift", "alt": "Alt", "space": "Space",
             "f8": "F8", "f9": "F9", "f10": "F10",
-            "capslock": "CapsLock", "insert": "Ins"}
+            "capslock": "CapsLock", "insert": "Ins", "s": "S"}
 
 _POLL_HZ = 30.0
 # A key has to be down this long before we call it speech. It stops a stray
