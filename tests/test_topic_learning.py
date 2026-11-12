@@ -28,9 +28,17 @@ def sources():
 
 
 def outputs():
-    lesson = {'concepts': [{'name': name, 'explanation': quote + ' This is a foundational concept in nuclear physics.',
+    names = ['Isotopes', 'Binding energy', 'Radioactive decay']
+    lesson = {'scope': ['foundations', 'radioactive decay', 'applications'],
+              'concepts': [{'name': name, 'explanation': quote + ' This is a foundational concept in nuclear physics.',
+                            'explanations': {'brief': quote, 'standard': quote + ' Standard explanation.',
+                                             'deep': quote + ' Deep explanation with assumptions and limits.'},
+                            'why_it_matters': 'It supports reliable reasoning about nuclear systems.',
+                            'how_it_works': 'The mechanism follows the measured properties described by the evidence.',
+                            'connections': ([{'target': names[(i + 1) % 3], 'type': 'related_to',
+                                              'why': 'Both concepts describe connected properties of atomic nuclei.'}]),
                             'evidence': [{'source_id': f'S{i+1}', 'quote': quote}]}
-                           for i, (name, quote) in enumerate(zip(['Isotopes', 'Binding energy', 'Radioactive decay'], QUOTES))],
+                           for i, (name, quote) in enumerate(zip(names, QUOTES))],
               'gaps': ['How do binding-energy measurements constrain nuclear models?']}
     answers = {'answers': [{'id': f'Q{i+1}', 'answer': quote + ' This conclusion has limited introductory scope.',
                             'source_ids': [f'S{i+1}']} for i, quote in enumerate(QUOTES)]}
@@ -53,9 +61,19 @@ def test_complete_study_persists_evidence_and_retrieves_after_new_process(vault)
     assert result['status'] == 'studied'
     assert result['passed'] == result['total'] == 3
     run = Path(result['folder'])
-    for name in ['plan.json', 'sources.json', 'draft.json', 'lesson.json', 'notes.md', 'questions.json', 'answers.json', 'review.json', 'result.json']:
+    for name in ['plan.json', 'sources.json', 'draft.json', 'lesson.json', 'connections.json', 'coverage.json',
+                 'freshness.json', 'evidence_matrix.json', 'notes.md', 'questions.json', 'answers.json',
+                 'review.json', 'result.json']:
         assert (run / name).is_file()
     assert learn._read(run / 'result.json') == result
+    coverage = learn._read(run / 'coverage.json')
+    assert coverage['total'] >= 6 and 0 <= coverage['coverage_percent'] <= 100
+    freshness = learn._read(run / 'freshness.json')
+    assert len(freshness['sources']) == 3 and all(row['content_sha256'] for row in freshness['sources'])
+    lesson = learn._read(run / 'lesson.json')
+    assert set(lesson['concepts'][0]['explanations']) == {'brief', 'standard', 'deep'}
+    assert len(learn._read(run / 'connections.json')) == 3
+    assert learn._read(run / 'evidence_matrix.json')[0]['support'] == 'single_source'
     assert 'Binding energy' in learn.search('binding energy')
     assert 'S2' in learn.read_topic(TOPIC)
     code = ('from pathlib import Path; from core import topic_learning as t; '

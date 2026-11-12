@@ -33,7 +33,8 @@ TOOL = {
     'name': 'topic_learning',
     'description': (
         'Actually study and retain a subject when asked to learn/study/master it (e.g. nuclear physics). '
-        'Researches sources, saves evidence-linked concepts, tests retrieval, reviews answers and records gaps '
+        'Researches sources, defines measurable scope coverage, saves multi-depth evidence-linked concepts and typed '
+        'connections, compares support, tracks freshness, tests retrieval, reviews answers and records gaps '
         'in memory/learning/. External-memory learning, NOT weight training. Actions: learn/continue '
         '(one bounded unit), list, status/read (topic, optional run_id), search (query). '
         'Use search/read to apply learned material in future answers; never claim success unless the stored result says studied.'

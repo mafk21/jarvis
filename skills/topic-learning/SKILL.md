@@ -17,10 +17,13 @@ a question or saving a reusable procedural skill.
    foundational study unit if the user has not specified a level. For a broad field
    such as nuclear physics, do not promise to master the whole field in one run.
    Do not substitute a web search followed by “I learned it.”
-2. The action gathers sources, saves their exact bounded excerpts, synthesizes
-   evidence-linked concepts, checks quote matches, answers practice questions using
-   saved notes, and separately audits the lesson/answers against sources. All
-   artifacts are written under `memory/learning/<topic-id>/runs/<run-id>/`.
+2. The action gathers sources, saves their exact bounded excerpts, defines measurable
+   scope dimensions, synthesizes evidence-linked concepts at brief/standard/deep
+   explanation levels, records why/how and typed concept connections, checks exact
+   quote matches, answers application/connection questions using saved notes, and
+   separately audits the lesson/answers against sources. Coverage and freshness are
+   reported honestly; they are not mastery. All artifacts are written under
+   `memory/learning/<topic-id>/runs/<run-id>/`.
 3. Read the returned status:
    - `studied`: one unit retained and passed a **retrieval-assisted, model-scored**
      review. Report the number of sources and passed checks and the actual folder.
@@ -53,7 +56,8 @@ a question or saving a reusable procedural skill.
 
 ## Verification
 
-Can you point to a saved `result.json`, `sources.json`, `lesson.json`, `notes.md`,
-`questions.json`, `answers.json` and `review.json` for a successful run? Did the
+Can you point to a saved `result.json`, `sources.json`, `lesson.json`,
+`connections.json`, `coverage.json`, `freshness.json`, `evidence_matrix.json`, `notes.md`, `questions.json`,
+`answers.json` and `review.json` for a successful run? Did the
 checks actually pass? Are gaps and source limitations visible? Does a new session
 retrieve the same notes? If not, do not say learning succeeded.

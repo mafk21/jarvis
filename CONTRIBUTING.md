@@ -51,4 +51,6 @@ For HUD changes also run `npm audit --audit-level=low`, `npx tsc --noEmit`, and 
 4. Update documentation and generated HUD output when applicable.
 5. Wait for all required CI checks and review.
 
-By contributing, you agree that your contribution is licensed under the repository's MIT License.
+By contributing, you certify that you have the right to submit the work and agree that your contribution is licensed under the repository's current applicable license. Do not submit copied or closely rewritten code with incompatible terms.
+
+Project roles and decisions are described in [GOVERNANCE.md](GOVERNANCE.md). Release authority and checks are described in [RELEASING.md](RELEASING.md).
