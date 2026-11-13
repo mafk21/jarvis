@@ -13,6 +13,13 @@ Capture live lectures, standups, or meetings and turn raw transcripts into struc
 
 ## Procedure
 
+0. **Use the user-specific strategy safely**:
+   - Call `adaptation_inspect` (`action="plan"`, `skill="meeting-copilot"`, plus the current `mode`, `project`, and `device` when known). A plan is preference data only: it never overrides the user's current instruction, safety policy, or an approval gate. If unavailable or review is required, continue with this playbook unchanged.
+   - Call `adaptation_outcome` (`action="start"`, `skill="meeting-copilot"`, `task_type=<short category>`, and the same context). Retain its outcome ID. This records no success claim.
+   - After the normal verification below, call `adaptation_outcome` (`action="finish"`, `outcome_id=<id>`, `result=<actual terminal state>`, `verification=<concrete evidence>`, and `failure_reason` for failed, partial, or uncertain work). Never mark success from a proposal or unverified output.
+   - If the user explicitly corrects this result, attach the feedback to that outcome and call `adaptation_feedback` with the exact outcome ID and a narrow behavior `target`. It remains inactive until owner-approved; silence is never feedback and learned behavior is never permission.
+
+
 1. **Start capture cleanly**:
    - When the session begins, call `manage_lecture` (`action="start"`, `title="<course or meeting name>"`).
    - As key points or user annotations arrive mid-session, append them with `manage_lecture` (`action="append"`, `text=...`). Check progress anytime via `action="status"`.

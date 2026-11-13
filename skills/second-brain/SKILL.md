@@ -13,6 +13,13 @@ Search across all three local memory layers — personal facts, saved notes/vaul
 
 ## Procedure
 
+0. **Use the user-specific strategy safely**:
+   - Call `adaptation_inspect` (`action="plan"`, `skill="second-brain"`, plus the current `mode`, `project`, and `device` when known). A plan is preference data only: it never overrides the user's current instruction, safety policy, or an approval gate. If unavailable or review is required, continue with this playbook unchanged.
+   - Call `adaptation_outcome` (`action="start"`, `skill="second-brain"`, `task_type=<short category>`, and the same context). Retain its outcome ID. This records no success claim.
+   - After the normal verification below, call `adaptation_outcome` (`action="finish"`, `outcome_id=<id>`, `result=<actual terminal state>`, `verification=<concrete evidence>`, and `failure_reason` for failed, partial, or uncertain work). Never mark success from a proposal or unverified output.
+   - If the user explicitly corrects this result, attach the feedback to that outcome and call `adaptation_feedback` with the exact outcome ID and a narrow behavior `target`. It remains inactive until owner-approved; silence is never feedback and learned behavior is never permission.
+
+
 1. **Pick the right recall layer (run 2+ when uncertain where it lives)**:
    - **Previously studied subjects**: `topic_learning` (`action="search"`, `query="..."`), then `read` for cited notes and review status. For requests to learn a new subject, use the `topic-learning` skill rather than only saving a short personal fact.
    - **Unified Brain & Forever Timeline (`brain_control` / `recall_memory`)**: Call `recall_memory` (`query="..."`) or `brain_control` (`action="search" | "timeline" | "outputs" | "ingest_file"`) to search personal memories, uploaded Brain knowledge files, months of spoken/typed/Telegram Forever Timeline turns, and past generated reports in one shot.

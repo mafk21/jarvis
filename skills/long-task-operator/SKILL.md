@@ -19,6 +19,13 @@ Choose the correct durable task type:
 
 ## Procedure
 
+0. **Use the user-specific strategy safely**:
+   - Call `adaptation_inspect` (`action="plan"`, `skill="long-task-operator"`, plus the current `mode`, `project`, and `device` when known). A plan is preference data only: it never overrides the user's current instruction, safety policy, or an approval gate. If unavailable or review is required, continue with this playbook unchanged.
+   - Call `adaptation_outcome` (`action="start"`, `skill="long-task-operator"`, `task_type=<short category>`, and the same context). Retain its outcome ID. This records no success claim.
+   - After the normal verification below, call `adaptation_outcome` (`action="finish"`, `outcome_id=<id>`, `result=<actual terminal state>`, `verification=<concrete evidence>`, and `failure_reason` for failed, partial, or uncertain work). Never mark success from a proposal or unverified output.
+   - If the user explicitly corrects this result, attach the feedback to that outcome and call `adaptation_feedback` with the exact outcome ID and a narrow behavior `target`. It remains inactive until owner-approved; silence is never feedback and learned behavior is never permission.
+
+
 1. **Translate the goal into observable steps.** Every workflow step must name a discoverable durable action and concrete parameters. Never insert conversational filler such as “continue working.”
 2. **Keep side effects explicit.** Separate research, drafting, sending, uploading, deleting, purchasing, or publishing into distinct steps so confirmation and failure are visible.
 3. **Chain verified outputs.** Use `${previous.output}` or `${step.N.output}` only where the next action genuinely consumes the persisted earlier result.

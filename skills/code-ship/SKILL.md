@@ -13,6 +13,13 @@ Bug reports, stack traces, feature requests in a codebase, refactoring tasks, ru
 
 ## Procedure
 
+0. **Use the user-specific strategy safely**:
+   - Call `adaptation_inspect` (`action="plan"`, `skill="code-ship"`, plus the current `mode`, `project`, and `device` when known). A plan is preference data only: it never overrides the user's current instruction, safety policy, or an approval gate. If unavailable or review is required, continue with this playbook unchanged.
+   - Call `adaptation_outcome` (`action="start"`, `skill="code-ship"`, `task_type=<short category>`, and the same context). Retain its outcome ID. This records no success claim.
+   - After the normal verification below, call `adaptation_outcome` (`action="finish"`, `outcome_id=<id>`, `result=<actual terminal state>`, `verification=<concrete evidence>`, and `failure_reason` for failed, partial, or uncertain work). Never mark success from a proposal or unverified output.
+   - If the user explicitly corrects this result, attach the feedback to that outcome and call `adaptation_feedback` with the exact outcome ID and a narrow behavior `target`. It remains inactive until owner-approved; silence is never feedback and learned behavior is never permission.
+
+
 1. **Decompose if large**: If the request spans 5+ distinct steps or multiple subsystems, spawn a tracked plan via `subagent` (`action="spawn"`, `goal=...`) so steps and verification stay isolated.
 2. **Inspect before editing**:
    - Check repository state with `github_automation` (`action="git_status"`, `cwd=...`) or `shell_agent` (`action="run"`, `command="git status -sb"`).

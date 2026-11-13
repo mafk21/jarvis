@@ -13,6 +13,13 @@ Transition the desktop and assistant into a distraction-free work or study block
 
 ## Procedure
 
+0. **Use the user-specific strategy safely**:
+   - Call `adaptation_inspect` (`action="plan"`, `skill="focus-mode"`, plus the current `mode`, `project`, and `device` when known). A plan is preference data only: it never overrides the user's current instruction, safety policy, or an approval gate. If unavailable or review is required, continue with this playbook unchanged.
+   - Call `adaptation_outcome` (`action="start"`, `skill="focus-mode"`, `task_type=<short category>`, and the same context). Retain its outcome ID. This records no success claim.
+   - After the normal verification below, call `adaptation_outcome` (`action="finish"`, `outcome_id=<id>`, `result=<actual terminal state>`, `verification=<concrete evidence>`, and `failure_reason` for failed, partial, or uncertain work). Never mark success from a proposal or unverified output.
+   - If the user explicitly corrects this result, attach the feedback to that outcome and call `adaptation_feedback` with the exact outcome ID and a narrow behavior `target`. It remains inactive until owner-approved; silence is never feedback and learned behavior is never permission.
+
+
 1. **Check for a saved user routine first**:
    - Call `manage_routines` (`action="list"`). If the user already saved a matching trigger (e.g. `"study mode"` or `"focus mode"`), run it via `manage_routines` (`action="run"`, `trigger="..."`) and complete any follow-up steps.
 2. **Otherwise execute the standard deep-work sequence**:

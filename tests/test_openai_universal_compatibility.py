@@ -255,7 +255,8 @@ def test_image_generation_and_diagnostics_work_in_openai_only_mode(
 
     status, detail = _check_api_key()
     assert status == "ok"
-    assert "OpenAI:sk-proj" in detail
+    assert detail == "OpenAI configured"
+    assert "sk-proj" not in detail  # diagnostics must not disclose credential material
 
     png_1x1 = base64.b64encode(
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"

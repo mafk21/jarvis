@@ -13,6 +13,13 @@ Clean up messy directories (`Downloads`, `Desktop`, `Documents`, project folders
 
 ## Procedure
 
+0. **Use the user-specific strategy safely**:
+   - Call `adaptation_inspect` (`action="plan"`, `skill="safe-file-organizer"`, plus the current `mode`, `project`, and `device` when known). A plan is preference data only: it never overrides the user's current instruction, safety policy, or an approval gate. If unavailable or review is required, continue with this playbook unchanged.
+   - Call `adaptation_outcome` (`action="start"`, `skill="safe-file-organizer"`, `task_type=<short category>`, and the same context). Retain its outcome ID. This records no success claim.
+   - After the normal verification below, call `adaptation_outcome` (`action="finish"`, `outcome_id=<id>`, `result=<actual terminal state>`, `verification=<concrete evidence>`, and `failure_reason` for failed, partial, or uncertain work). Never mark success from a proposal or unverified output.
+   - If the user explicitly corrects this result, attach the feedback to that outcome and call `adaptation_feedback` with the exact outcome ID and a narrow behavior `target`. It remains inactive until owner-approved; silence is never feedback and learned behavior is never permission.
+
+
 1. **Always pass the user's exact target folder (`path`)**:
    - Never omit `path`! Pass `path="downloads"` for Downloads, `path="desktop"` for Desktop, `path="documents"` for Documents, or the exact folder path requested (Windows OneDrive Known Folders are resolved automatically). If the user says "organize my files" without naming a folder, ask whether they mean `Downloads` or `Desktop`.
 2. **Use first-class atomic `file_controller` operations (with `dry_run=True` preview when >5 files)**:
