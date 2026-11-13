@@ -63,6 +63,8 @@ def _time(value: str) -> datetime:
 
 def _context_matches(record: AdaptationRecord, current: AdaptationContext) -> bool:
     saved = record.context
+    if record.scope is AdaptationScope.GLOBAL:
+        return True
     if saved.device and saved.device.casefold() != current.device.casefold():
         return False
     if record.scope is AdaptationScope.PROJECT:
@@ -92,22 +94,20 @@ def propose_strategy(
     candidates: list[AdaptationRecord] = []
     excluded: list[StrategyExclusion] = []
     all_records = tuple(records)
-    superseded_ids = {
-        item.previous_record_id for item in all_records
-        if item.status is StrategyStatus.ACTIVE and item.previous_record_id
-    }
     for record in all_records:
         reason = ""
-        if record.skill != skill:
+        if record.scope is not AdaptationScope.GLOBAL and record.skill != skill:
             reason = "different skill"
         elif record.status is not StrategyStatus.ACTIVE:
             reason = "not active"
-        elif record.id in superseded_ids:
+        elif any(item.status is StrategyStatus.ACTIVE and item.previous_record_id == record.id
+                 and (item.scope is AdaptationScope.GLOBAL or item.skill == skill)
+                 and _context_matches(item, context) for item in all_records):
             reason = "superseded by a newer active record"
         elif record.scope is AdaptationScope.ONE_TIME:
             reason = "one-time strategies require an exact execution binding"
-        elif record.risk is RiskLevel.HIGH:
-            reason = "high-risk strategies require runtime authorization"
+        elif record.risk is RiskLevel.HIGH or record.permission_related:
+            reason = "high-risk or permission-related strategies require runtime authorization"
         elif record.kind is AdaptationKind.OBSERVED_PATTERN:
             reason = "observations are evidence, not executable strategies"
         elif not _context_matches(record, context):
@@ -148,10 +148,10 @@ def propose_strategy(
         )
         winner = ranked[0]
         if len(ranked) > 1:
-            first_key = (_KIND_RANK[winner.kind], _SCOPE_RANK[winner.scope], winner.confidence, winner.updated_at)
-            second = ranked[1]
-            second_key = (_KIND_RANK[second.kind], _SCOPE_RANK[second.scope], second.confidence, second.updated_at)
-            if first_key == second_key and winner.strategy.casefold() != second.strategy.casefold():
+            first_key = (_KIND_RANK[winner.kind], _SCOPE_RANK[winner.scope], winner.confidence, _time(winner.updated_at))
+            tied = [item for item in ranked if
+                    (_KIND_RANK[item.kind], _SCOPE_RANK[item.scope], item.confidence, _time(item.updated_at)) == first_key]
+            if len({item.strategy.casefold() for item in tied}) > 1:
                 review = True
                 excluded.extend(StrategyExclusion(item.id, "ambiguous equal-priority conflict") for item in ranked)
                 continue

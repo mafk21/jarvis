@@ -13,11 +13,11 @@ _RECORDER: OutcomeRecorder | None = None
 
 def _enabled() -> tuple[bool, str]:
     from core.session_privacy import enabled as incognito
-    from memory.config_manager import get_adaptive_learning_enabled
+    from core.adaptation_privacy import explicitly_enabled
     if incognito():
         return False, "Incognito is active, so adaptive outcome recording is paused."
-    if not get_adaptive_learning_enabled():
-        return False, "Adaptive learning is disabled in Privacy settings."
+    if not explicitly_enabled():
+        return False, "Adaptive learning must be explicitly enabled in Privacy settings."
     return True, ""
 
 
@@ -30,6 +30,12 @@ def _recorder() -> OutcomeRecorder:
 
 
 def adaptation_outcome(parameters=None, **_kwargs) -> str:
+    from core.adaptation_privacy import persistence_guard
+    with persistence_guard():
+        return _adaptation_outcome_guarded(parameters)
+
+
+def _adaptation_outcome_guarded(parameters=None) -> str:
     ok, message = _enabled()
     if not ok:
         return message
@@ -38,13 +44,16 @@ def adaptation_outcome(parameters=None, **_kwargs) -> str:
     recorder = _recorder()
     try:
         if action == "start":
+            execution_id = str(p.get("execution_id") or "").strip()
+            if not execution_id:
+                return "Adaptive outcome was not started: a stable execution_id is required."
             session = recorder.start(
                 skill=str(p.get("skill") or ""), task_type=str(p.get("task_type") or "task"),
                 context=AdaptationContext(mode=str(p.get("mode") or "default"),
                                           project=str(p.get("project") or ""),
                                           device=str(p.get("device") or "")),
                 strategy_record_id=str(p.get("strategy_record_id") or "").strip() or None,
-                execution_id=str(p.get("execution_id") or "").strip() or None,
+                execution_id=execution_id,
             )
             return f"Adaptive outcome started: {session.id}. This is not a success claim."
         outcome_id = str(p.get("outcome_id") or "")

@@ -177,6 +177,7 @@ class AdaptationRecord:
     validated_at: str | None = None
     previous_record_id: str | None = None
     target: str = "general"
+    permission_related: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "id", _text(self.id, "adaptation id", 80))
@@ -197,6 +198,8 @@ class AdaptationRecord:
         if self.previous_record_id is not None:
             object.__setattr__(self, "previous_record_id", _text(self.previous_record_id, "previous_record_id", 80))
         object.__setattr__(self, "target", _text(self.target, "target", 80))
+        if not isinstance(self.permission_related, bool):
+            raise AdaptationValidationError("permission_related must be true or false")
         if self.kind in {AdaptationKind.OBSERVED_PATTERN, AdaptationKind.LEARNED_STRATEGY} and not self.evidence_refs:
             raise AdaptationValidationError("inferred adaptations require evidence")
         if self.risk is RiskLevel.HIGH and self.kind in {AdaptationKind.OBSERVED_PATTERN, AdaptationKind.LEARNED_STRATEGY}:
@@ -214,21 +217,21 @@ class AdaptationRecord:
         fields = {
             "id", "skill", "kind", "scope", "context", "statement", "strategy",
             "evidence_refs", "confidence", "risk", "status", "created_at", "updated_at",
-            "validated_at", "previous_record_id", "target",
+            "validated_at", "previous_record_id", "target", "permission_related",
         }
         _strict(data, fields, "adaptation record")
-        required = fields - {"validated_at", "previous_record_id", "target"}
+        required = fields - {"validated_at", "previous_record_id", "target", "permission_related"}
         missing = required - set(data)
         if missing:
             raise AdaptationValidationError(f"adaptation record is missing fields: {', '.join(sorted(missing))}")
         return cls(
             id=data["id"], skill=data["skill"], kind=data["kind"], scope=data["scope"],
             context=AdaptationContext.from_dict(data["context"]), statement=data["statement"],
-            strategy=data["strategy"], evidence_refs=tuple(data["evidence_refs"]),
+            strategy=data["strategy"], evidence_refs=data["evidence_refs"],
             confidence=data["confidence"], risk=data["risk"], status=data["status"],
             created_at=data["created_at"], updated_at=data["updated_at"],
             validated_at=data.get("validated_at"), previous_record_id=data.get("previous_record_id"),
-            target=data.get("target", "general"),
+            target=data.get("target", "general"), permission_related=data.get("permission_related", False),
         )
 
 

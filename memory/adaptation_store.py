@@ -12,6 +12,8 @@ import os
 import stat
 import sys
 import threading
+import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -92,6 +94,35 @@ def _parse(raw: Any) -> AdaptationSnapshot:
     if len(set(outcome_ids)) != len(outcome_ids):
         raise AdaptationValidationError("adaptation outcome IDs must be unique")
     return AdaptationSnapshot(revision=revision, records=parsed_records, outcomes=parsed_outcomes)
+
+
+@contextmanager
+def _process_lock(path: Path):
+    """Cross-process exclusive lock using the platform's native file locking."""
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(lock_path, "a+b")
+    try:
+        if os.name == "nt":
+            import msvcrt
+            handle.seek(0)
+            if handle.tell() == 0:
+                handle.write(b"0")
+                handle.flush()
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        if os.name == "nt":
+            import msvcrt
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
 
 
 class AdaptationStore:
@@ -194,7 +225,7 @@ class AdaptationStore:
         operation: Callable[[AdaptationSnapshot], AdaptationSnapshot],
         expected_revision: int | None,
     ) -> AdaptationSnapshot:
-        with _LOCK:
+        with _LOCK, _process_lock(self.path):
             current = self.load()
             if expected_revision is not None and current.revision != expected_revision:
                 raise RevisionConflict(
@@ -203,11 +234,10 @@ class AdaptationStore:
             candidate = operation(current)
             # Re-parse our own output before touching disk, enforcing every bound.
             validated = _parse(_payload(candidate))
-            if self.path.exists():
-                # Backup receives the previous valid state, enabling rollback from
-                # a torn/tampered primary without accepting unvalidated bytes.
-                self._write_file(self.backup_path, current)
             self._write_file(self.path, validated)
+            # Recovery must reflect deletions and clears; never preserve data the
+            # owner removed in a stale backup.
+            self._write_file(self.backup_path, validated)
             return validated
 
     def _read(self, target: Path) -> AdaptationSnapshot:
@@ -227,7 +257,7 @@ class AdaptationStore:
             separators=(",", ":"),
         )
         target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = target.with_name(f".{target.name}.tmp")
+        temporary = target.with_name(f".{target.name}.{os.getpid()}.{threading.get_ident()}.{uuid.uuid4().hex}.tmp")
         try:
             temporary.write_text(wrapper, encoding="utf-8")
             try:

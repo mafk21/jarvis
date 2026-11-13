@@ -20,7 +20,8 @@ def enabled() -> bool:
 
 def set_enabled(value: bool) -> bool:
     global _ENABLED
-    with _LOCK:
+    from core.adaptation_privacy import persistence_guard
+    with persistence_guard(), _LOCK:
         _ENABLED = bool(value)
         return _ENABLED
 

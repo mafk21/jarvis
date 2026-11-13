@@ -6,12 +6,14 @@ from memory.adaptation_store import AdaptationStore
 
 
 def adaptation_feedback(parameters=None, **_kwargs) -> str:
-    from core.session_privacy import enabled as incognito
-    from memory.config_manager import get_adaptive_learning_enabled
-    if incognito():
-        return "Incognito is active, so adaptive feedback storage is paused."
-    if not get_adaptive_learning_enabled():
-        return "Adaptive learning is disabled in Privacy settings."
+    from core.adaptation_privacy import explicitly_enabled, persistence_guard
+    with persistence_guard():
+        if not explicitly_enabled():
+            return "Adaptive learning must be explicitly enabled and Incognito must be off."
+        return _adaptation_feedback_guarded(parameters)
+
+
+def _adaptation_feedback_guarded(parameters=None) -> str:
     p = parameters or {}
     outcome_id = str(p.get("outcome_id") or "").strip()
     text = str(p.get("user_text") or "").strip()
@@ -26,6 +28,9 @@ def adaptation_feedback(parameters=None, **_kwargs) -> str:
     )
     if attributed is None:
         return "No feedback saved: the statement was not an explicit correction or preference."
+    existing = next((item for item in snapshot.records if item.id == attributed.record.id), None)
+    if existing is not None and existing.status.value == "active":
+        return f"Adaptation {existing.id} is already active; repeated feedback did not change it."
     result = store.put_record(attributed.record, expected_revision=snapshot.revision)
     warning = " Scope or permission wording requires confirmation." if attributed.requires_scope_confirmation else ""
     return (

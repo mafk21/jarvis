@@ -15,13 +15,23 @@ def adaptation_inspect(parameters=None, **_kwargs) -> str:
     store = AdaptationStore()
     if action == "list":
         report = inspect(store, skill=str(p.get("skill") or "").strip() or None)
-        if not report["records"]:
+        records = report["records"]
+        record_id = str(p.get("record_id") or "").strip()
+        if record_id:
+            records = [item for item in records if item["id"] == record_id]
+        try:
+            offset = max(0, int(p.get("offset") or 0)); limit = min(100, max(1, int(p.get("limit") or 50)))
+        except (TypeError, ValueError):
+            return "offset and limit must be integers."
+        if not records:
             return f"Adaptation revision {report['revision']}: no matching learned strategies."
-        lines = [f"Adaptation revision {report['revision']} ({len(report['records'])} record(s)):" ]
-        for item in report["records"][:100]:
+        page = records[offset:offset + limit]
+        lines = [f"Adaptation revision {report['revision']} ({len(records)} record(s), showing {offset + 1}-{offset + len(page)}):" ]
+        for item in page:
             lines.append(
-                f"{item['id']} | {item['skill']} | {item['target']} | {item['status']} | "
-                f"{item['kind']} | {item['strategy']}"
+                f"{item['id']} | skill={item['skill']} target={item['target']} status={item['status']} "
+                f"kind={item['kind']} scope={item['scope']} risk={item['risk']} "
+                f"context={item['context']} evidence={item['evidence_refs']} strategy={item['strategy']}"
             )
         return "\n".join(lines)
     if action == "plan":
@@ -54,6 +64,7 @@ TOOL = {
             "action": {"type": "STRING", "enum": ["list", "plan"]},
             "skill": {"type": "STRING"}, "mode": {"type": "STRING"},
             "project": {"type": "STRING"}, "device": {"type": "STRING"},
+            "record_id": {"type": "STRING"}, "offset": {"type": "INTEGER"}, "limit": {"type": "INTEGER"},
         },
         "required": ["action"],
     },

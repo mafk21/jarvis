@@ -211,6 +211,16 @@ def rotate_vault_master_key(accounts_file: Path, config_file: Path) -> dict[str,
             had_cfg_enc = count_encrypted_leaves(raw_cfg) > 0
             cfg_plain = _decrypt_with_key(raw_cfg, old_key)
 
+        adaptation_plain: list[tuple[Path, dict[str, Any]]] = []
+        adaptation_path = BASE_DIR / "memory" / "adaptation_store.json"
+        for candidate in (adaptation_path, adaptation_path.with_suffix(adaptation_path.suffix + ".bak")):
+            if candidate.is_file():
+                wrapper = json.loads(candidate.read_text(encoding="utf-8"))
+                encrypted = wrapper.get("encrypted_store") if isinstance(wrapper, dict) else None
+                if not isinstance(encrypted, str):
+                    raise ValueError(f"Invalid adaptation store wrapper: {candidate}")
+                adaptation_plain.append((candidate, json.loads(decrypt_secret(encrypted, key=old_key))))
+
         new_key = secrets.token_bytes(32)
         VAULT_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
         VAULT_KEY_FILE.write_bytes(base64.urlsafe_b64encode(new_key))
@@ -231,6 +241,15 @@ def rotate_vault_master_key(accounts_file: Path, config_file: Path) -> dict[str,
             from memory.config_manager import invalidate_config_cache
             invalidate_config_cache()
             reencrypted += count_encrypted_leaves(enc_cfg)
+
+        for candidate, plain_store in adaptation_plain:
+            wrapper = {"version": 1, "encrypted_store": encrypt_secret(
+                json.dumps(plain_store, ensure_ascii=False, separators=(",", ":")), key=new_key
+            )}
+            temporary = candidate.with_suffix(candidate.suffix + ".rotate.tmp")
+            temporary.write_text(json.dumps(wrapper, separators=(",", ":")), encoding="utf-8")
+            os.replace(temporary, candidate)
+            reencrypted += 1
 
         log_audit_event("vault", "rotate_master_key", {}, f"Re-encrypted {reencrypted} secrets")
         return {"ok": True, "reencrypted_count": reencrypted}

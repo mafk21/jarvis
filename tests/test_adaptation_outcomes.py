@@ -106,10 +106,10 @@ def test_execution_id_prevents_duplicate_tracking(store):
     recorder.start(
         skill="code-ship", task_type="test", context=CTX, execution_id="same-run"
     )
-    with pytest.raises(OutcomeLifecycleError, match="already being tracked"):
-        recorder.start(
-            skill="code-ship", task_type="test", context=CTX, execution_id="same-run"
-        )
+    again = recorder.start(
+        skill="code-ship", task_type="test", context=CTX, execution_id="same-run"
+    )
+    assert again.id == recorder.open_sessions()[0].id
 
 
 def test_abandon_makes_no_persisted_outcome_claim(store):
@@ -133,7 +133,7 @@ def test_concurrent_distinct_sessions_are_all_recorded(store):
 
     def finish(session):
         return recorder.finish(
-            session.id, result=OutcomeResult.SUCCEEDED, verification="Verified"
+            session.id, result=OutcomeResult.SUCCEEDED, verification="Observed expected output"
         )[0].id
 
     with ThreadPoolExecutor(max_workers=8) as pool:

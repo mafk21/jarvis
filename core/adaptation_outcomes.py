@@ -32,6 +32,7 @@ class OutcomeSession:
     strategy_record_id: str | None
     started_at: str
     started_monotonic: float
+    store_revision: int
     user_feedback: str = ""
     correction: str = ""
     reversed: bool = False
@@ -84,13 +85,16 @@ class OutcomeRecorder:
             skill=str(skill),
             task_type=str(task_type),
             context=context,
-            strategy_record_id=strategy_record_id,
+            strategy_record_id=(str(strategy_record_id).strip() if strategy_record_id is not None else None),
             started_at=stamp,
             started_monotonic=self._monotonic(),
+            store_revision=self.store.load().revision,
         )
         with self._lock:
-            if outcome_id in self._open or outcome_id in self._closed:
-                raise OutcomeLifecycleError("execution is already being tracked")
+            if outcome_id in self._open:
+                return self._open[outcome_id]
+            if outcome_id in self._closed or any(item.id == outcome_id for item in self.store.load().outcomes):
+                raise OutcomeLifecycleError("execution outcome is already persisted")
             self._open[outcome_id] = session
         return session
 
@@ -136,12 +140,15 @@ class OutcomeRecorder:
                 raise OutcomeLifecycleError("result must be a terminal OutcomeResult") from exc
             proof = str(verification or "").strip()
             reason = str(failure_reason or "").strip()
-            if not proof:
-                raise OutcomeLifecycleError("terminal outcomes require verification evidence")
+            if len(proof) < 12 or proof.casefold() in {"done", "completed", "success", "verified", "ok", "it worked"}:
+                raise OutcomeLifecycleError("terminal outcomes require concrete verification evidence")
             if terminal in {OutcomeResult.FAILED, OutcomeResult.PARTIAL, OutcomeResult.UNCERTAIN} and not reason:
                 raise OutcomeLifecycleError(f"{terminal.value} outcomes require a failure reason")
             elapsed = max(0.0, self._monotonic() - session.started_monotonic)
             latency_ms = min(604_800_000, round(elapsed * 1000))
+            current_store = self.store.load()
+            if current_store.revision > session.store_revision and not current_store.records and not current_store.outcomes:
+                raise OutcomeLifecycleError("outcome session was invalidated by adaptation clearing")
             outcome = SkillOutcome(
                 id=session.id,
                 skill=session.skill,

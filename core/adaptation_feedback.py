@@ -41,6 +41,11 @@ _PERMISSION_LANGUAGE = re.compile(
     r"permission to|authorize|automatically send|automatically delete)\b",
     re.IGNORECASE,
 )
+_UNSAFE_INSTRUCTION = re.compile(
+    r"\b(?:ignore|override|bypass|disable)\b.{0,40}\b(?:instruction|policy|safety|system|confirmation)|"
+    r"\b(?:reveal|send|delete|execute|run)\b.{0,30}\b(?:secret|password|token|api key)\b",
+    re.IGNORECASE,
+)
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 
@@ -100,6 +105,10 @@ def attribute_explicit_feedback(
     kind = AdaptationKind.EXPLICIT_CORRECTION if correction else AdaptationKind.EXPLICIT_PREFERENCE
     scope, scope_confirmation = _scope(text, context)
     permission_detected = bool(_PERMISSION_LANGUAGE.search(text))
+    if _UNSAFE_INSTRUCTION.search(text):
+        return None
+    if scope is AdaptationScope.GLOBAL:
+        context = AdaptationContext()
     timestamp = now or datetime.now(timezone.utc).isoformat(timespec="seconds")
     digest = hashlib.sha256(
         f"{skill}\0{target}\0{evidence}\0{text.casefold()}".encode("utf-8")
@@ -120,6 +129,7 @@ def attribute_explicit_feedback(
         created_at=timestamp,
         updated_at=timestamp,
         target=target,
+        permission_related=permission_detected,
     )
     reason = "explicit correction" if correction else "explicit preference"
     if permission_detected:

@@ -23,10 +23,8 @@ def adaptation_manage(parameters=None, **_kwargs) -> str:
             result = rollback(store, record_id, expected_revision=revision)
         elif action == "remove":
             result = remove(store, record_id, expected_revision=revision)
-        elif action == "clear":
-            result = store.clear(expected_revision=revision)
         else:
-            return "No change made: use activate, disable, rollback, remove, or clear."
+            return "No change made: use activate, disable, rollback, or remove. Use adaptation_clear for complete erasure."
         return f"Adaptation {action} completed at revision {result.revision}."
     except (ValueError, KeyError, RuntimeError) as exc:
         return f"No adaptation change was made: {exc}"
@@ -34,11 +32,11 @@ def adaptation_manage(parameters=None, **_kwargs) -> str:
 
 TOOL = {
     "name": "adaptation_manage",
-    "description": "Owner-confirmed control to activate, disable, roll back, remove, or clear learned skill behavior. Inspect first and pass its exact revision. Never changes action permissions.",
+    "description": "Owner-confirmed control to activate, disable, roll back, or remove learned skill behavior. Inspect first and pass its exact revision. Never changes action permissions.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "action": {"type": "STRING", "enum": ["activate", "disable", "rollback", "remove", "clear"]},
+            "action": {"type": "STRING", "enum": ["activate", "disable", "rollback", "remove"]},
             "record_id": {"type": "STRING"},
             "expected_revision": {"type": "INTEGER"},
         },

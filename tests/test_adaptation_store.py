@@ -76,8 +76,9 @@ def test_corrupt_primary_recovers_previous_valid_snapshot(store):
     store.put_record(make_record(2))  # creates backup of first
     store.path.write_text("tampered", encoding="utf-8")
     recovered = store.load()
-    assert recovered == first
-    assert store.load() == first
+    assert recovered.revision == 2
+    assert {item.id for item in recovered.records} == {"adapt-1", "adapt-2"}
+    assert store.load() == recovered
 
 
 def test_both_corrupt_fail_closed_without_silently_erasing_evidence(store):

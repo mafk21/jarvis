@@ -2,6 +2,7 @@ import pytest
 
 from actions import adaptation_feedback as feedback_action
 from actions import adaptation_outcome as outcome_action
+from core import adaptation_privacy
 from core import security_vault as vault
 from core.session_privacy import set_enabled
 from memory import adaptation_store as storage, config_manager as cfg
@@ -11,7 +12,7 @@ from memory import adaptation_store as storage, config_manager as cfg
 def isolated(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "ADAPTATION_PATH", tmp_path / "adaptations.json")
     monkeypatch.setattr(vault, "VAULT_KEY_FILE", tmp_path / ".vault.key")
-    monkeypatch.setattr(cfg, "get_adaptive_learning_enabled", lambda: True)
+    monkeypatch.setattr(adaptation_privacy, "explicitly_enabled", lambda: True)
     outcome_action._RECORDER = None
     set_enabled(False)
     yield storage.AdaptationStore()
@@ -47,6 +48,6 @@ def test_runtime_recording_respects_incognito_and_adaptive_toggle(isolated, monk
     set_enabled(True)
     assert "Incognito" in outcome_action.adaptation_outcome({"action": "start"})
     set_enabled(False)
-    monkeypatch.setattr(cfg, "get_adaptive_learning_enabled", lambda: False)
-    assert "disabled" in outcome_action.adaptation_outcome({"action": "start"})
+    monkeypatch.setattr(adaptation_privacy, "explicitly_enabled", lambda: False)
+    assert "explicitly enabled" in outcome_action.adaptation_outcome({"action": "start"})
     assert isolated.load().outcomes == ()

@@ -37,12 +37,20 @@ def activate(store: AdaptationStore, record_id: str, *, expected_revision: int) 
     item = snapshot.records[index]
     if item.status is not StrategyStatus.CANDIDATE:
         raise GovernanceError("only candidate adaptations can be activated")
-    if item.risk is RiskLevel.HIGH:
-        raise GovernanceError("high-risk adaptations cannot be activated as strategy")
+    if item.risk is RiskLevel.HIGH or item.permission_related:
+        raise GovernanceError("high-risk or permission-related adaptations cannot be activated as strategy")
     if item.kind is AdaptationKind.OBSERVED_PATTERN:
         raise GovernanceError("observed patterns are evidence and cannot be activated")
     rows = list(snapshot.records)
-    rows[index] = replace(item, status=StrategyStatus.ACTIVE, validated_at=_now(), updated_at=_now())
+    previous = next((row for row in rows if row.status is StrategyStatus.ACTIVE
+                     and row.skill == item.skill and row.target == item.target
+                     and row.context == item.context), None)
+    stamp = _now()
+    if previous is not None:
+        previous_index = rows.index(previous)
+        rows[previous_index] = replace(previous, status=StrategyStatus.DISABLED, updated_at=stamp)
+    rows[index] = replace(item, status=StrategyStatus.ACTIVE, validated_at=stamp, updated_at=stamp,
+                          previous_record_id=previous.id if previous else item.previous_record_id)
     return store.replace_records(tuple(rows), expected_revision=expected_revision)
 
 

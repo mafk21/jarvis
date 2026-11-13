@@ -202,7 +202,9 @@ def get_adaptive_learning_enabled() -> bool:
 
 
 def save_adaptive_learning_enabled(enabled: bool) -> None:
-    _save_flag("adaptive_learning_enabled", bool(enabled))
+    from core.adaptation_privacy import persistence_guard
+    with persistence_guard():
+        _save_flag("adaptive_learning_enabled", bool(enabled))
 
 
 def get_timeline_persistence_enabled() -> bool:
