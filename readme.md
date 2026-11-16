@@ -7,7 +7,6 @@
 </p>
 
 <p align="center">
-  <a href="https://jarvis-khaki-eight.vercel.app/">Website</a> ·
   <a href="https://jarvis-khaki-eight.vercel.app/docs/">Documentation</a> ·
   <a href="docs/PRIVACY.md">Privacy</a> ·
   <a href="https://github.com/mafk21/OS/issues">Issues</a>
