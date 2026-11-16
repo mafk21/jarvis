@@ -19,7 +19,7 @@
 
 JARVIS turns your computer into an AI-operated workspace. Speak or type a goal and it can understand your screen, use applications, work with files, research, write and run code, coordinate specialist agents, and complete long-running tasks with visible progress.
 
-It is open source and runs on **Windows, macOS, and Linux**.
+It is source-available for personal, non-commercial use and runs on **Windows, macOS, and Linux**.
 
 ## Highlights
 
@@ -119,4 +119,8 @@ JARVIS is currently public beta software. Use the latest release, review permiss
 
 ## License
 
-JARVIS OS is released under the [MIT License](LICENSE).
+JARVIS is source-available under the [JARVIS Personal-Use License](LICENSE).
+
+You may download, run, study, and modify JARVIS on devices you own or control for personal, non-commercial use. Publishing, redistribution, sublicensing, commercial use, and using JARVIS or its contents to develop or distribute another project are not permitted without separate written permission.
+
+This is not an OSI-approved open-source license. See [LICENSE](LICENSE) for the complete terms.

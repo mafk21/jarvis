@@ -51,4 +51,4 @@ For HUD changes also run `npm audit --audit-level=low`, `npx tsc --noEmit`, and 
 4. Update documentation and generated HUD output when applicable.
 5. Wait for all required CI checks and review.
 
-By contributing, you agree that your contribution is licensed under the repository's MIT License.
+By intentionally submitting a contribution, you agree that your contribution is licensed under the repository's [JARVIS Personal-Use License](LICENSE) and may be used, modified, and included in JARVIS. A contribution does not grant permission to publish, redistribute, sublicense, sell, or separately exploit JARVIS or derivatives.
