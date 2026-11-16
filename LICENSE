@@ -1,21 +1,70 @@
-MIT License
+JARVIS Personal-Use License (Source-Available)
+Version 1.0 — 21 October 2026
 
-Copyright (c) 2026 mafk21
+Copyright (c) 2026 JARVIS Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+of this software and associated documentation files (the "Software"), to use
+the Software on devices they own or control for personal, non-commercial
+purposes only, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. PERSONAL USE ONLY. You may install and run the Software on devices you own
+   or control for your own personal use. You may read, study, and modify the
+   source code for your own personal use.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. NO PUBLISHING OR REDISTRIBUTION. You may NOT publish, redistribute,
+   republish, upload, share, or otherwise distribute the Software or any
+   modified or derivative work based on it. This includes, without limitation,
+   publishing it through app stores, package registries, code-hosting services,
+   websites, or as part of another project, application, product, or service.
+   You may NOT present the Software or any modified or derivative work as your
+   own work.
+
+3. NO COMMERCIAL USE. You may NOT use the Software or any modified or
+   derivative work for commercial purposes. Prohibited commercial purposes
+   include selling, licensing, monetizing, or offering the Software as a paid
+   product or service, and incorporating it into a commercial product,
+   service, or business activity.
+
+4. NO SUBLICENSING OR TRANSFER. You may NOT sublicense, sell, assign, or
+   transfer any rights granted under this License to another person or entity.
+
+5. CONTRIBUTIONS. By intentionally submitting a contribution to the JARVIS
+   project, you agree that your contribution is licensed under this same
+   Personal-Use License and may be used, modified, and included in JARVIS.
+   Submitting a contribution does not grant you any right to publish,
+   redistribute, sublicense, sell, or separately exploit JARVIS or any
+   derivative work based on it.
+
+6. ATTRIBUTION AND NOTICES. You may NOT remove or alter copyright, authorship,
+   attribution, licensing, or other legal notices included with the Software.
+
+7. TRADEMARKS. "JARVIS," the JARVIS name, its logos, and its branding may not
+   be used to imply endorsement, affiliation, or authorization, or to brand a
+   separate product, project, or service, without prior written permission
+   from the JARVIS maintainers.
+
+8. NO WARRANTY. THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS, COPYRIGHT HOLDERS, OR
+   CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+9. TERMINATION. Any use of the Software that violates this License
+   automatically terminates the rights granted to you under it. Upon
+   termination, you must stop using the Software and delete all copies and
+   modified or derivative versions in your possession or control.
+
+---
+
+Note: This is a source-available license, not an OSI-approved open-source
+license. The source code is public for transparency, personal learning,
+personal modification, and contributions to JARVIS itself. Public source code
+does not mean that the Software is open source or that redistribution is
+permitted.
+
+If you want to publish, redistribute, or use JARVIS or its contents in a
+commercial project, contact the maintainers for separate written permission
+or a commercial license.
