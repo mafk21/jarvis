@@ -1,5 +1,5 @@
 """
-MARK LIV — one-time setup.
+JARVIS — one-time setup.
 
 Installs the Python dependencies for THIS operating system only: the OS-specific
 packages in requirements.txt carry `sys_platform` markers, so a macOS or Linux
@@ -56,7 +56,7 @@ def _check_python() -> None:
         print("   Microsoft C++ Build Tools are not required when using Python 3.12.")
         sys.exit(1)
     if v < MIN_PY:
-        print(f"\n❌ Python {v[0]}.{v[1]} detected — MARK LIV needs at "
+        print(f"\n❌ Python {v[0]}.{v[1]} detected — JARVIS needs at "
               f"least Python {MIN_PY[0]}.{MIN_PY[1]}.")
         print("   Install a supported version and run setup with it, e.g.:")
         print(f"     py -{MIN_PY[0]}.{MIN_PY[1]} setup.py        (Windows)")
@@ -76,7 +76,7 @@ def _check_assets() -> None:
 
 
 def main() -> None:
-    print(f"⚙  MARK LIV setup — detected OS: {OS or 'unknown'}, "
+    print(f"⚙  JARVIS setup — detected OS: {OS or 'unknown'}, "
           f"Python {sys.version_info[0]}.{sys.version_info[1]}")
     _check_python()
 
