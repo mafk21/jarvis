@@ -1,6 +1,6 @@
 # OS — Complete Upgrade Roadmap — All Missing Skills, In Order
 
-**Branch:** `arena/2cd19056-os` | **Base:** Mark LV (LV + LIV + LIII foundations)  
+**Branch:** `arena/2cd19056-os` | **Base:** JARVIS foundations
 **Principle:** No mix-ups — each phase is isolated, backward-compatible, with its own commit.
 
 ---
