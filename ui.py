@@ -6233,7 +6233,6 @@ class JarvisUI:
         self.root = _RootShim(self._app)
         self._apex_bridge = None
         self._bg_dock = None
-        self._edge_signal = None
         self._classic_mode = False
         self._embedded_hud = False
         self._pending_text_commands: list[str] = []
@@ -6767,15 +6766,6 @@ class JarvisUI:
 
     def set_state(self, state: str):
         self._win._state_sig.emit(state)
-        try:
-            def _edge():
-                if self._edge_signal is None:
-                    from core.edge_signal import EdgeSignal
-                    self._edge_signal = EdgeSignal()
-                self._edge_signal.show_state(str(state))
-            self._win._bridge_call_sig.emit(_edge)
-        except Exception:
-            pass
         if self._bg_dock is not None:
             try:
                 self._win._bridge_call_sig.emit(
