@@ -32,7 +32,13 @@ def run(params: dict, context: dict | None = None) -> str:
         surface = save_background_surface(str(params.get("surface") or ""))
         label = "top notch" if surface == "notch" else "bottom-right mini dock"
         return f"Background Mode will use the {label} from the next time it is opened."
-    raise ValueError("action must be set_incognito, set_presentation, or set_background_surface")
+    if action == "set_startup_view":
+        from memory.config_manager import save_startup_view_preference
+
+        view = save_startup_view_preference(str(params.get("view") or ""))
+        label = "compact notch" if view == "notch" else "full interface"
+        return f"JARVIS will start in the {label} on future launches."
+    raise ValueError("action must be set_incognito, set_presentation, set_background_surface, or set_startup_view")
 
 
 TOOL = {
@@ -42,17 +48,19 @@ TOOL = {
         "Use set_presentation for phrases such as 'switch to Sentinel', 'keep it clean', "
         "or 'you can swear around me'. Use set_incognito for explicit private-session requests. "
         "Use set_background_surface with surface=notch for a PixelNotch-style top-centre notch, "
-        "or surface=corner for the established bottom-right mini dock. "
+        "or surface=corner for the established bottom-right mini dock. Use set_startup_view "
+        "with view=notch or view=interface when the user asks how JARVIS should open on every launch. "
         "Never infer these preferences from casual language."
     ),
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "action": {"type": "STRING", "description": "set_presentation | set_incognito | set_background_surface"},
+            "action": {"type": "STRING", "description": "set_presentation | set_incognito | set_background_surface | set_startup_view"},
             "personality": {"type": "STRING", "description": "command | inventor | sentinel | companion"},
             "language": {"type": "STRING", "description": "clean | casual | adult"},
             "enabled": {"type": "BOOLEAN", "description": "Incognito state for set_incognito"},
             "surface": {"type": "STRING", "description": "notch | corner"},
+            "view": {"type": "STRING", "description": "notch | interface"},
         },
         "required": ["action"],
     },

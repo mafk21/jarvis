@@ -380,6 +380,7 @@ class ApexHudBridge:
             "social_hud": social_hud_obj,
             "background_mode": bool(self._background_mode),
             "background_surface": cfg.get_background_surface(),
+            "startup_view": cfg.get_startup_view_preference(),
         }
 
     # ── Push methods called from JarvisUI / audio threads ─────────────────────
@@ -1343,6 +1344,15 @@ class ApexHudBridge:
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             return {"ok": True, "background_surface": surface}
+
+        if action == "set_startup_view":
+            from memory.config_manager import save_startup_view_preference
+
+            try:
+                view = save_startup_view_preference(str(data.get("view") or ""))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            return {"ok": True, "startup_view": {"prompted": True, "view": view}}
 
         if action == "enter_background_mode":
             self._background_mode = True

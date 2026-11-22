@@ -41,8 +41,8 @@ from PyQt6.QtWidgets import (
 )
 
 COLLAPSED_SIZE = 64
-NOTCH_W = 224
-NOTCH_H = 42
+NOTCH_W = 92
+NOTCH_H = 28
 NOTCH_TOP_MARGIN = 0
 EXPANDED_W = 388
 EXPANDED_H = 346
@@ -776,54 +776,40 @@ class BackgroundDockWidget(QWidget):
             # Architectural top-centre shell: flush to the display edge with
             # restrained signal light. It intentionally does not imitate a
             # hardware camera cut-out or claim screen space outside this window.
-            body = QRectF(1.0, -8.0, w - 2.0, h + 7.0)
+            body = QRectF(1.0, -7.0, w - 2.0, h + 6.0)
             body_path = QPainterPath()
-            body_path.addRoundedRect(body, 17.0, 17.0)
+            body_path.addRoundedRect(body, 12.0, 12.0)
             shell = QLinearGradient(0.0, 0.0, 0.0, h)
-            shell.setColorAt(0.0, QColor(1, 4, 7, 252))
-            shell.setColorAt(1.0, QColor(7, 14, 22, 248))
+            shell.setColorAt(0.0, QColor(0, 2, 4, 253))
+            shell.setColorAt(1.0, QColor(5, 11, 17, 250))
             edge = QColor(active_col)
-            edge.setAlpha(115 if self._hovered else 65)
-            p.setPen(QPen(edge, 1.0))
+            edge.setAlpha(105 if self._hovered else 52)
+            p.setPen(QPen(edge, 0.9))
             p.setBrush(QBrush(shell))
             p.drawPath(body_path)
 
-            # Hairline signal rail and living status point.
+            # A tiny living core and two restrained rails keep the footprint
+            # comparable to the existing minimize orb rather than a toolbar.
             rail = QColor(active_col)
-            rail.setAlpha(int(80 + 75 * breath + 70 * lvl))
-            rail_pen = QPen(rail, 1.35 + lvl * 0.8)
+            rail.setAlpha(int(72 + 70 * breath + 65 * lvl))
+            rail_pen = QPen(rail, 1.15 + lvl * 0.65)
             rail_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             p.setPen(rail_pen)
-            p.drawLine(QPointF(72.0, h - 4.5), QPointF(w - 72.0, h - 4.5))
+            p.drawLine(QPointF(10.0, h - 4.0), QPointF(31.0, h - 4.0))
+            p.drawLine(QPointF(w - 31.0, h - 4.0), QPointF(w - 10.0, h - 4.0))
 
-            dot_r = 3.0 + lvl * 2.0 + breath * 0.35
-            glow = QRadialGradient(QPointF(22.0, 20.0), dot_r * 3.0)
+            dot_r = 2.5 + lvl * 1.8 + breath * 0.3
+            glow = QRadialGradient(QPointF(w * 0.5, 13.0), dot_r * 3.1)
             centre = QColor(active_col)
             centre.setAlpha(245)
             fade = QColor(active_col)
             fade.setAlpha(0)
             glow.setColorAt(0.0, QColor(255, 255, 255, 245))
-            glow.setColorAt(0.32, centre)
+            glow.setColorAt(0.34, centre)
             glow.setColorAt(1.0, fade)
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QBrush(glow))
-            p.drawEllipse(QPointF(22.0, 20.0), dot_r * 3.0, dot_r * 3.0)
-
-            state = "MUTED" if self._muted else st
-            label_font = QFont("Segoe UI", 8)
-            label_font.setBold(True)
-            label_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.4)
-            p.setFont(label_font)
-            p.setPen(QColor(232, 239, 244, 225))
-            p.drawText(QRectF(37.0, 5.0, 116.0, 28.0), Qt.AlignmentFlag.AlignVCenter, self._assistant_name.upper())
-
-            state_font = QFont("Consolas", 7)
-            state_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.7)
-            p.setFont(state_font)
-            state_col = QColor(active_col)
-            state_col.setAlpha(220)
-            p.setPen(state_col)
-            p.drawText(QRectF(w - 89.0, 5.0, 70.0, 28.0), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, state[:10])
+            p.drawEllipse(QPointF(w * 0.5, 13.0), dot_r * 3.1, dot_r * 3.1)
             p.end()
             return
 

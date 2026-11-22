@@ -91,7 +91,8 @@ export default function JarvisHudOverlays() {
     activityOpen,
     backgroundMode,
     backgroundSurface,
-    setBackgroundSurface,
+    startupView,
+    saveStartupView,
     setConsoleOpen,
     setSettingsOpen,
     setSetupOpen,
@@ -544,10 +545,10 @@ export default function JarvisHudOverlays() {
                 section: "SYSTEM",
                 items: [
                   {
-                    label: `Background Surface · ${backgroundSurface === "notch" ? "Top Notch" : "Corner Dock"}`,
+                    label: `Launch View · ${startupView.view === "notch" ? "Notch" : "Interface"}`,
                     icon: <Minimize2 size={12} />,
-                    active: backgroundSurface === "notch",
-                    run: () => setBackgroundSurface(backgroundSurface === "notch" ? "corner" : "notch"),
+                    active: startupView.view === "notch",
+                    run: () => saveStartupView(startupView.view === "notch" ? "interface" : "notch"),
                   },
                   {
                     label: "Enter Background Mode",
@@ -1917,6 +1918,64 @@ export default function JarvisHudOverlays() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── First-run launch surface choice ── */}
+      {!startupView.prompted && integrationsReady && personaChosen && !setupOpen && !integrationsModalOpen && !personaModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choose how JARVIS opens"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 88,
+            background: "rgba(2, 6, 12, 0.84)",
+            backdropFilter: "blur(14px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div style={{
+            width: "min(540px, 95vw)",
+            background: theme.panelBg,
+            border: `1px solid ${PRIMARY}55`,
+            borderRadius: 18,
+            padding: 24,
+            boxShadow: `0 0 50px ${PRIMARY}24, 0 18px 50px rgba(0,0,0,0.85)`,
+          }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.2em", color: PRIMARY }}>
+              CHOOSE YOUR LAUNCH VIEW
+            </div>
+            <h2 style={{ margin: "12px 0 7px", fontSize: 22, color: "#f0ede8" }}>How should JARVIS open?</h2>
+            <p style={{ margin: "0 0 18px", fontSize: 12.5, lineHeight: 1.55, color: "rgba(240,237,232,0.68)" }}>
+              Choose the full interface or a tiny always-on-top notch. You can switch anytime from HUD ▾ under System.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => saveStartupView("interface")}
+                style={{ ...pillBase, minHeight: 112, padding: 16, borderRadius: 14, display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", background: `${PRIMARY}0d`, borderColor: `${PRIMARY}44`, color: "#f0ede8" }}
+              >
+                <span style={{ fontSize: 15, fontWeight: 700 }}>FULL INTERFACE</span>
+                <span style={{ marginTop: 7, fontSize: 11, lineHeight: 1.45, textAlign: "left", color: "rgba(240,237,232,0.62)" }}>Open directly into the complete JARVIS HUD every time.</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await saveStartupView("notch");
+                  await enterBackgroundMode();
+                }}
+                style={{ ...pillBase, minHeight: 112, padding: 16, borderRadius: 14, display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", background: `${SECONDARY}0d`, borderColor: `${SECONDARY}55`, color: "#f0ede8" }}
+              >
+                <span style={{ fontSize: 15, fontWeight: 700 }}>COMPACT NOTCH</span>
+                <span style={{ marginTop: 7, fontSize: 11, lineHeight: 1.45, textAlign: "left", color: "rgba(240,237,232,0.62)" }}>Start quietly in a tiny top-centre notch with voice still active.</span>
+              </button>
             </div>
           </div>
         </div>

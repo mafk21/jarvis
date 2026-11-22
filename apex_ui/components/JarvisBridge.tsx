@@ -273,7 +273,9 @@ export type JarvisContextValue = {
   personaModalOpen: boolean;
   backgroundMode: boolean;
   backgroundSurface: "corner" | "notch";
+  startupView: { prompted: boolean; view: "interface" | "notch" };
   setBackgroundSurface: (surface: "corner" | "notch") => Promise<void>;
+  saveStartupView: (view: "interface" | "notch") => Promise<void>;
   setConsoleOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setSetupOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -485,7 +487,11 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
   const [activityOpen, setActivityOpen] = useState(false);
   const [personaModalOpen, setPersonaModalOpen] = useState(false);
   const [backgroundMode, setBackgroundMode] = useState(false);
-  const [backgroundSurface, setBackgroundSurfaceState] = useState<"corner" | "notch">("corner");
+  const [backgroundSurface, setBackgroundSurfaceState] = useState<"corner" | "notch">("notch");
+  const [startupView, setStartupView] = useState<{ prompted: boolean; view: "interface" | "notch" }>({
+    prompted: true,
+    view: "interface",
+  });
   const [workers, setWorkers] = useState<WorkerItem[]>([]);
   const [terminalSessions, setTerminalSessions] = useState<TerminalSession[]>([]);
   const [activeCompanion, setActiveCompanion] = useState<CompanionSummary | null>(null);
@@ -705,6 +711,12 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
       if (typeof d.raw_state === "string") setRawState(d.raw_state);
       if (d.background_surface === "corner" || d.background_surface === "notch") {
         setBackgroundSurfaceState(d.background_surface);
+      }
+      if (d.startup_view && typeof d.startup_view === "object") {
+        const pref = d.startup_view as { prompted?: unknown; view?: unknown };
+        if (pref.view === "interface" || pref.view === "notch") {
+          setStartupView({ prompted: pref.prompted === true, view: pref.view });
+        }
       }
       if (typeof d.muted === "boolean") setMuted(d.muted);
       if (typeof d.paused === "boolean") setPaused(d.paused);
@@ -1453,6 +1465,21 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
     }
   }, [backgroundSurface]);
 
+  const saveStartupView = useCallback(async (view: "interface" | "notch") => {
+    const previous = startupView;
+    setStartupView({ prompted: true, view });
+    try {
+      const r = await fetch("/api/hud/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_startup_view", view }),
+      });
+      if (!r.ok) setStartupView(previous);
+    } catch {
+      setStartupView(previous);
+    }
+  }, [startupView]);
+
   const enterBackgroundMode = useCallback(async () => {
     setBackgroundMode(true);
     try {
@@ -1660,7 +1687,9 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
       personaModalOpen,
       backgroundMode,
       backgroundSurface,
+      startupView,
       setBackgroundSurface,
+      saveStartupView,
       setConsoleOpen,
       setSettingsOpen,
       setSetupOpen,
@@ -1774,7 +1803,9 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
       personaModalOpen,
       backgroundMode,
       backgroundSurface,
+      startupView,
       setBackgroundSurface,
+      saveStartupView,
       choosePersona,
       saveIntegrations,
       skipIntegrations,
