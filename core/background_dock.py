@@ -13,6 +13,7 @@ from PyQt6.QtCore import (
     QRect,
     QRectF,
     Qt,
+    QTime,
     QTimer,
     pyqtSignal,
 )
@@ -787,6 +788,23 @@ class BackgroundDockWidget(QWidget):
             p.setPen(QPen(edge, 0.9))
             p.setBrush(QBrush(shell))
             p.drawPath(body_path)
+
+            if self._muted or st not in {"LISTENING", "SPEAKING"}:
+                # At rest the notch becomes useful instead of decorative. The
+                # existing animation timer repaints it frequently enough to keep
+                # the clock current without adding another background timer.
+                clock_font = QFont("Segoe UI", 9)
+                clock_font.setBold(True)
+                clock_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.0)
+                p.setFont(clock_font)
+                p.setPen(QColor(232, 239, 244, 225))
+                p.drawText(
+                    QRectF(0.0, 1.0, w, h - 3.0),
+                    Qt.AlignmentFlag.AlignCenter,
+                    QTime.currentTime().toString("HH:mm"),
+                )
+                p.end()
+                return
 
             # A tiny living core and two restrained rails keep the footprint
             # comparable to the existing minimize orb rather than a toolbar.

@@ -124,6 +124,8 @@ def test_desktop_ui_and_dock_wiring_preserve_live_voice():
     assert "FramelessWindowHint" in dock_src
     assert "show_collapsed_in_corner" in dock_src
     assert "set_surface_mode" in dock_src
+    assert 'QTime.currentTime().toString("HH:mm")' in dock_src
+    assert 'self._muted or st not in {"LISTENING", "SPEAKING"}' in dock_src
     assert "get_background_surface" in ui_src
     assert "get_startup_view_preference" in ui_src
     assert "self._start_in_notch" in ui_src
