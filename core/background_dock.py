@@ -41,6 +41,9 @@ from PyQt6.QtWidgets import (
 )
 
 COLLAPSED_SIZE = 64
+NOTCH_W = 224
+NOTCH_H = 42
+NOTCH_TOP_MARGIN = 0
 EXPANDED_W = 388
 EXPANDED_H = 346
 CORNER_MARGIN = 18
@@ -157,6 +160,7 @@ class BackgroundDockWidget(QWidget):
 
         self._expanded = False
         self._hovered = False
+        self._surface_mode = "corner"
         self._persona = "male"
         self._assistant_name = "JARVIS"
         self._raw_state = "LISTENING"
@@ -472,8 +476,22 @@ class BackgroundDockWidget(QWidget):
             return scr.availableGeometry()
         return QRect(0, 0, 1920, 1040)
 
+    def set_surface_mode(self, mode: str) -> None:
+        """Select the optional notch or the established corner dock.
+
+        The mode only changes the collapsed background surface. The full drawer
+        remains the proven corner implementation and is never reached from the
+        intentionally minimal notch.
+        """
+        value = str(mode or "corner").strip().lower()
+        self._surface_mode = "notch" if value == "notch" else "corner"
+
     def _target_geometry(self, expanded: bool) -> QRect:
         avail = self._available_screen_rect()
+        if self._surface_mode == "notch" and not expanded:
+            w, h = NOTCH_W, NOTCH_H
+            x = avail.left() + max(0, (avail.width() - w) // 2)
+            return QRect(x, avail.top() + NOTCH_TOP_MARGIN, w, h)
         w = EXPANDED_W if expanded else COLLAPSED_SIZE
         h = EXPANDED_H if expanded else COLLAPSED_SIZE
         x = max(
@@ -487,14 +505,19 @@ class BackgroundDockWidget(QWidget):
         return QRect(x, y, w, h)
 
     def show_collapsed_in_corner(self) -> None:
-        """Show the compact 64x64 orb button in the bottom-right corner without stealing focus."""
+        """Show the selected compact background surface without stealing focus."""
         self._anim.stop()
         self._expanded = False
         self._panel.hide()
         self.setGeometry(self._target_geometry(False))
-        self.setToolTip(
-            f"{self._assistant_name} running in background (voice active) — Click to expand & type"
-        )
+        if self._surface_mode == "notch":
+            self.setToolTip(
+                f"{self._assistant_name} running in background (voice active) — Click to restore full HUD"
+            )
+        else:
+            self.setToolTip(
+                f"{self._assistant_name} running in background (voice active) — Click to expand & type"
+            )
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.show()
         self.raise_()
@@ -674,6 +697,11 @@ class BackgroundDockWidget(QWidget):
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
         if event.button() == Qt.MouseButton.LeftButton:
+            if self._surface_mode == "notch" and not self._expanded:
+                self._drag_press_global = None
+                self._dragged = False
+                event.accept()
+                return
             self._drag_press_global = event.globalPosition().toPoint()
             self._drag_start_offsets = (
                 self._anchor_right_offset,
@@ -712,7 +740,10 @@ class BackgroundDockWidget(QWidget):
             self._drag_press_global = None
             self._dragged = False
             if not self._expanded and not was_dragged:
-                self.expand()
+                if self._surface_mode == "notch":
+                    self._handle_restore_click()
+                else:
+                    self.expand()
                 event.accept()
                 return
         super().mouseReleaseEvent(event)
@@ -740,6 +771,62 @@ class BackgroundDockWidget(QWidget):
 
         lvl = min(1.0, self._audio_level * 1.4)
         breath = 0.5 + 0.5 * math.sin(self._phase * 1.6)
+
+        if self._surface_mode == "notch":
+            # Architectural top-centre shell: flush to the display edge with
+            # restrained signal light. It intentionally does not imitate a
+            # hardware camera cut-out or claim screen space outside this window.
+            body = QRectF(1.0, -8.0, w - 2.0, h + 7.0)
+            body_path = QPainterPath()
+            body_path.addRoundedRect(body, 17.0, 17.0)
+            shell = QLinearGradient(0.0, 0.0, 0.0, h)
+            shell.setColorAt(0.0, QColor(1, 4, 7, 252))
+            shell.setColorAt(1.0, QColor(7, 14, 22, 248))
+            edge = QColor(active_col)
+            edge.setAlpha(115 if self._hovered else 65)
+            p.setPen(QPen(edge, 1.0))
+            p.setBrush(QBrush(shell))
+            p.drawPath(body_path)
+
+            # Hairline signal rail and living status point.
+            rail = QColor(active_col)
+            rail.setAlpha(int(80 + 75 * breath + 70 * lvl))
+            rail_pen = QPen(rail, 1.35 + lvl * 0.8)
+            rail_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            p.setPen(rail_pen)
+            p.drawLine(QPointF(72.0, h - 4.5), QPointF(w - 72.0, h - 4.5))
+
+            dot_r = 3.0 + lvl * 2.0 + breath * 0.35
+            glow = QRadialGradient(QPointF(22.0, 20.0), dot_r * 3.0)
+            centre = QColor(active_col)
+            centre.setAlpha(245)
+            fade = QColor(active_col)
+            fade.setAlpha(0)
+            glow.setColorAt(0.0, QColor(255, 255, 255, 245))
+            glow.setColorAt(0.32, centre)
+            glow.setColorAt(1.0, fade)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(glow))
+            p.drawEllipse(QPointF(22.0, 20.0), dot_r * 3.0, dot_r * 3.0)
+
+            state = "MUTED" if self._muted else st
+            label_font = QFont("Segoe UI", 8)
+            label_font.setBold(True)
+            label_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.4)
+            p.setFont(label_font)
+            p.setPen(QColor(232, 239, 244, 225))
+            p.drawText(QRectF(37.0, 5.0, 116.0, 28.0), Qt.AlignmentFlag.AlignVCenter, self._assistant_name.upper())
+
+            state_font = QFont("Consolas", 7)
+            state_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.7)
+            p.setFont(state_font)
+            state_col = QColor(active_col)
+            state_col.setAlpha(220)
+            p.setPen(state_col)
+            p.drawText(QRectF(w - 89.0, 5.0, 70.0, 28.0), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, state[:10])
+            p.end()
+            return
+
         hover_boost = 1.08 if self._hovered else 1.0
 
         # 1. Soft outer ambient halo

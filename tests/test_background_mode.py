@@ -93,6 +93,20 @@ def test_native_background_dock_bottom_right_expand_type_and_collapse():
 
         dock._handle_restore_click()
         assert len(restored) == 1
+
+        # 6. Optional PixelNotch-style surface is centred at the top, remains
+        # always on top, and restores the full HUD instead of opening the drawer.
+        dock.set_surface_mode("notch")
+        dock.show_collapsed_in_corner()
+        notch_geom = dock.geometry()
+        assert notch_geom.width() == 224
+        assert notch_geom.height() == 42
+        assert abs(notch_geom.center().x() - dock._available_screen_rect().center().x()) <= 2
+        assert notch_geom.top() == dock._available_screen_rect().top()
+        assert not dock._expanded
+        before = len(restored)
+        dock._handle_restore_click()
+        assert len(restored) == before + 1
     finally:
         dock.hide_dock()
         dock.close()
@@ -109,10 +123,36 @@ def test_desktop_ui_and_dock_wiring_preserve_live_voice():
     assert "WindowStaysOnTopHint" in dock_src
     assert "FramelessWindowHint" in dock_src
     assert "show_collapsed_in_corner" in dock_src
+    assert "set_surface_mode" in dock_src
+    assert "get_background_surface" in ui_src
 
 
-def test_bridge_background_mode_keeps_voice_alive_on_window_close():
+def test_background_surface_preference_is_validated(monkeypatch):
+    from memory import config_manager
+
+    monkeypatch.setattr(config_manager, "load_api_keys", lambda: {"background_surface": "notch"})
+    assert config_manager.get_background_surface() == "notch"
+    monkeypatch.setattr(config_manager, "load_api_keys", lambda: {"background_surface": "unexpected"})
+    assert config_manager.get_background_surface() == "corner"
+
+    saved = {}
+    monkeypatch.setattr(config_manager, "_patch_config", lambda **values: saved.update(values))
+    assert config_manager.save_background_surface("pixelnotch") == "notch"
+    assert saved == {"background_surface": "notch"}
+    with pytest.raises(ValueError):
+        config_manager.save_background_surface("floating-chaos")
+
+
+def test_bridge_background_mode_keeps_voice_alive_on_window_close(monkeypatch):
     quit_calls: list[int] = []
+    from memory import config_manager
+
+    selected_surface = {"value": "corner"}
+    monkeypatch.setattr(
+        config_manager,
+        "save_background_surface",
+        lambda value: selected_surface.update(value=value) or value,
+    )
     entered: list[int] = []
     exited: list[int] = []
     spoken_texts: list[str] = []
@@ -138,6 +178,15 @@ def test_bridge_background_mode_keeps_voice_alive_on_window_close():
     app = bridge._build_app()
 
     with TestClient(app) as client:
+        # User can explicitly select the persistent background surface.
+        r_surface = client.post(
+            "/api/hud/action",
+            json={"action": "set_background_surface", "surface": "notch"},
+        )
+        assert r_surface.status_code == 200
+        assert r_surface.json()["background_surface"] == "notch"
+        assert selected_surface["value"] == "notch"
+
         # Enter background mode
         r = client.post("/api/hud/action", json={"action": "enter_background_mode"})
         assert r.status_code == 200

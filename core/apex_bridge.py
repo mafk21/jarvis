@@ -379,6 +379,7 @@ class ApexHudBridge:
             "video": video_obj,
             "social_hud": social_hud_obj,
             "background_mode": bool(self._background_mode),
+            "background_surface": cfg.get_background_surface(),
         }
 
     # ── Push methods called from JarvisUI / audio threads ─────────────────────
@@ -1333,6 +1334,15 @@ class ApexHudBridge:
                 self._invoke_qt(win._do_stop_all)
             self.push_state("LISTENING")
             return {"ok": True}
+
+        if action == "set_background_surface":
+            from memory.config_manager import save_background_surface
+
+            try:
+                surface = save_background_surface(str(data.get("surface") or ""))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            return {"ok": True, "background_surface": surface}
 
         if action == "enter_background_mode":
             self._background_mode = True

@@ -90,6 +90,8 @@ export default function JarvisHudOverlays() {
     personaModalOpen,
     activityOpen,
     backgroundMode,
+    backgroundSurface,
+    setBackgroundSurface,
     setConsoleOpen,
     setSettingsOpen,
     setSetupOpen,
@@ -432,7 +434,7 @@ export default function JarvisHudOverlays() {
           type="button"
           data-testid="enter-bg-mode-btn"
           onClick={() => enterBackgroundMode()}
-          title="Background Mode — docks JARVIS to a floating button in the bottom-right corner while keeping live voice & mic active"
+          title={`Background Mode — uses the ${backgroundSurface === "notch" ? "top-centre notch" : "bottom-right corner dock"} while keeping live voice & mic active`}
           style={{
             ...pillBase,
             padding: "5px 10px",
@@ -542,7 +544,13 @@ export default function JarvisHudOverlays() {
                 section: "SYSTEM",
                 items: [
                   {
-                    label: "Background Mode",
+                    label: `Background Surface · ${backgroundSurface === "notch" ? "Top Notch" : "Corner Dock"}`,
+                    icon: <Minimize2 size={12} />,
+                    active: backgroundSurface === "notch",
+                    run: () => setBackgroundSurface(backgroundSurface === "notch" ? "corner" : "notch"),
+                  },
+                  {
+                    label: "Enter Background Mode",
                     icon: <Minimize2 size={12} />,
                     active: backgroundMode,
                     run: () => enterBackgroundMode(),

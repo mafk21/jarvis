@@ -272,6 +272,8 @@ export type JarvisContextValue = {
   activityOpen: boolean;
   personaModalOpen: boolean;
   backgroundMode: boolean;
+  backgroundSurface: "corner" | "notch";
+  setBackgroundSurface: (surface: "corner" | "notch") => Promise<void>;
   setConsoleOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setSetupOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -483,6 +485,7 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
   const [activityOpen, setActivityOpen] = useState(false);
   const [personaModalOpen, setPersonaModalOpen] = useState(false);
   const [backgroundMode, setBackgroundMode] = useState(false);
+  const [backgroundSurface, setBackgroundSurfaceState] = useState<"corner" | "notch">("corner");
   const [workers, setWorkers] = useState<WorkerItem[]>([]);
   const [terminalSessions, setTerminalSessions] = useState<TerminalSession[]>([]);
   const [activeCompanion, setActiveCompanion] = useState<CompanionSummary | null>(null);
@@ -700,6 +703,9 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
         setAssistantName(d.assistant_name);
       }
       if (typeof d.raw_state === "string") setRawState(d.raw_state);
+      if (d.background_surface === "corner" || d.background_surface === "notch") {
+        setBackgroundSurfaceState(d.background_surface);
+      }
       if (typeof d.muted === "boolean") setMuted(d.muted);
       if (typeof d.paused === "boolean") setPaused(d.paused);
       if (typeof d.offline === "boolean") setOffline(d.offline);
@@ -1432,6 +1438,21 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
     }
   }, [sendAction]);
 
+  const setBackgroundSurface = useCallback(async (surface: "corner" | "notch") => {
+    const previous = backgroundSurface;
+    setBackgroundSurfaceState(surface);
+    try {
+      const r = await fetch("/api/hud/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_background_surface", surface }),
+      });
+      if (!r.ok) setBackgroundSurfaceState(previous);
+    } catch {
+      setBackgroundSurfaceState(previous);
+    }
+  }, [backgroundSurface]);
+
   const enterBackgroundMode = useCallback(async () => {
     setBackgroundMode(true);
     try {
@@ -1638,6 +1659,8 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
       activityOpen,
       personaModalOpen,
       backgroundMode,
+      backgroundSurface,
+      setBackgroundSurface,
       setConsoleOpen,
       setSettingsOpen,
       setSetupOpen,
@@ -1750,6 +1773,8 @@ export function JarvisProvider({ children }: { children: React.ReactNode }) {
       activityOpen,
       personaModalOpen,
       backgroundMode,
+      backgroundSurface,
+      setBackgroundSurface,
       choosePersona,
       saveIntegrations,
       skipIntegrations,

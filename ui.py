@@ -6419,6 +6419,9 @@ class JarvisUI:
                 self._win.hide()
             self._minimize_chromium_hud_windows()
             dock = self._ensure_bg_dock()
+            from memory.config_manager import get_background_surface
+
+            dock.set_surface_mode(get_background_surface())
             dock.sync_metadata(
                 persona=get_persona(),
                 assistant_name=get_assistant_name(),
