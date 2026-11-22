@@ -565,14 +565,35 @@ def _patch_config(**fields) -> None:
 
 
 def get_background_surface() -> str:
-    """Presentation used when the full HUD enters background mode.
+    """Presentation used when the full HUD enters background mode."""
+    value = str(load_api_keys().get("background_surface", "notch") or "notch").strip().lower()
+    return value if value in {"corner", "notch"} else "notch"
 
-    ``corner`` preserves the established bottom-right mini dock. ``notch`` is
-    the optional top-centre, always-on-top compact surface. Unknown or stale
-    values deliberately fall back to the proven corner dock.
-    """
-    value = str(load_api_keys().get("background_surface", "corner") or "corner").strip().lower()
-    return value if value in {"corner", "notch"} else "corner"
+
+def get_startup_view_preference() -> dict:
+    """Return the explicit first-run choice for future launches."""
+    data = load_api_keys()
+    view = str(data.get("startup_view", "interface") or "interface").strip().lower()
+    if view not in {"interface", "notch"}:
+        view = "interface"
+    return {
+        "prompted": bool(data.get("startup_view_prompted", False)),
+        "view": view,
+    }
+
+
+def save_startup_view_preference(view: str) -> str:
+    value = str(view or "").strip().lower()
+    aliases = {"hud": "interface", "full": "interface", "ui": "interface"}
+    value = aliases.get(value, value)
+    if value not in {"interface", "notch"}:
+        raise ValueError("startup view must be 'interface' or 'notch'")
+    fields = {"startup_view_prompted": True, "startup_view": value}
+    if value == "notch":
+        # A notch launch must not resolve to a previously saved corner dock.
+        fields["background_surface"] = "notch"
+    _patch_config(**fields)
+    return value
 
 
 def save_background_surface(surface: str) -> str:

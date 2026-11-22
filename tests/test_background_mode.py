@@ -99,8 +99,8 @@ def test_native_background_dock_bottom_right_expand_type_and_collapse():
         dock.set_surface_mode("notch")
         dock.show_collapsed_in_corner()
         notch_geom = dock.geometry()
-        assert notch_geom.width() == 224
-        assert notch_geom.height() == 42
+        assert notch_geom.width() == 92
+        assert notch_geom.height() == 28
         assert abs(notch_geom.center().x() - dock._available_screen_rect().center().x()) <= 2
         assert notch_geom.top() == dock._available_screen_rect().top()
         assert not dock._expanded
@@ -125,6 +125,8 @@ def test_desktop_ui_and_dock_wiring_preserve_live_voice():
     assert "show_collapsed_in_corner" in dock_src
     assert "set_surface_mode" in dock_src
     assert "get_background_surface" in ui_src
+    assert "get_startup_view_preference" in ui_src
+    assert "self._start_in_notch" in ui_src
 
 
 def test_background_surface_preference_is_validated(monkeypatch):
@@ -142,6 +144,26 @@ def test_background_surface_preference_is_validated(monkeypatch):
     with pytest.raises(ValueError):
         config_manager.save_background_surface("floating-chaos")
 
+    monkeypatch.setattr(
+        config_manager,
+        "load_api_keys",
+        lambda: {"startup_view_prompted": True, "startup_view": "notch"},
+    )
+    assert config_manager.get_startup_view_preference() == {
+        "prompted": True,
+        "view": "notch",
+    }
+    saved.clear()
+    assert config_manager.save_startup_view_preference("full") == "interface"
+    assert saved == {"startup_view_prompted": True, "startup_view": "interface"}
+    saved.clear()
+    assert config_manager.save_startup_view_preference("notch") == "notch"
+    assert saved == {
+        "startup_view_prompted": True,
+        "startup_view": "notch",
+        "background_surface": "notch",
+    }
+
 
 def test_bridge_background_mode_keeps_voice_alive_on_window_close(monkeypatch):
     quit_calls: list[int] = []
@@ -152,6 +174,12 @@ def test_bridge_background_mode_keeps_voice_alive_on_window_close(monkeypatch):
         config_manager,
         "save_background_surface",
         lambda value: selected_surface.update(value=value) or value,
+    )
+    selected_startup = {"value": "interface"}
+    monkeypatch.setattr(
+        config_manager,
+        "save_startup_view_preference",
+        lambda value: selected_startup.update(value=value) or value,
     )
     entered: list[int] = []
     exited: list[int] = []
@@ -186,6 +214,14 @@ def test_bridge_background_mode_keeps_voice_alive_on_window_close(monkeypatch):
         assert r_surface.status_code == 200
         assert r_surface.json()["background_surface"] == "notch"
         assert selected_surface["value"] == "notch"
+
+        r_startup = client.post(
+            "/api/hud/action",
+            json={"action": "set_startup_view", "view": "notch"},
+        )
+        assert r_startup.status_code == 200
+        assert r_startup.json()["startup_view"] == {"prompted": True, "view": "notch"}
+        assert selected_startup["value"] == "notch"
 
         # Enter background mode
         r = client.post("/api/hud/action", json={"action": "enter_background_mode"})

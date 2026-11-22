@@ -6238,6 +6238,7 @@ class JarvisUI:
         self._embedded_hud = False
         self._pending_text_commands: list[str] = []
         from memory.config_manager import (
+            get_startup_view_preference,
             get_ui_color,
             is_integrations_onboarding_done,
             is_persona_chosen,
@@ -6251,6 +6252,13 @@ class JarvisUI:
             os.environ.get("JARVIS_SKIP_PERSONA_PROMPT", "").strip().lower()
             in ("1", "true", "yes")
             or is_persona_chosen()
+        )
+        startup_pref = get_startup_view_preference()
+        self._start_in_notch = bool(
+            startup_pref["prompted"]
+            and startup_pref["view"] == "notch"
+            and self._integrations_ready
+            and self._persona_selected
         )
         if self._persona_selected:
             try:
@@ -6298,7 +6306,7 @@ class JarvisUI:
                 hud_url = self._apex_bridge.start()
 
                 embedded = False
-                if not no_launch:
+                if not no_launch and not self._start_in_notch:
                     try:
                         from PyQt6.QtCore import QUrl
                         from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -6321,7 +6329,7 @@ class JarvisUI:
                     if self._win._overlay is not None:
                         self._win._overlay.hide()
                     self._win.hide()
-                    if not no_launch:
+                    if not no_launch and not self._start_in_notch:
                         launch_app_window(hud_url)
                 # Stop all legacy paint/metric QTimers (~250 Hz combined) so the
                 # hidden PyQt6 avatar & canvas consume zero CPU / Python GIL.
@@ -6333,6 +6341,12 @@ class JarvisUI:
                 self._apex_bridge = None
                 self._classic_mode = True
                 self._win.show()
+
+        if self._start_in_notch:
+            # The user explicitly chose the notch as their launch surface. Wait
+            # until Qt and the local bridge are ready, then enter the same proven
+            # background path used by the HUD control.
+            QTimer.singleShot(120, self.enter_background_mode)
 
     def _quit_from_hud(self) -> None:
         if self._apex_bridge is not None and getattr(
