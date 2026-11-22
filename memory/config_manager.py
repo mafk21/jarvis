@@ -564,6 +564,27 @@ def _patch_config(**fields) -> None:
     _write_config_text(json.dumps(data, indent=4), encoding="utf-8")
 
 
+def get_background_surface() -> str:
+    """Presentation used when the full HUD enters background mode.
+
+    ``corner`` preserves the established bottom-right mini dock. ``notch`` is
+    the optional top-centre, always-on-top compact surface. Unknown or stale
+    values deliberately fall back to the proven corner dock.
+    """
+    value = str(load_api_keys().get("background_surface", "corner") or "corner").strip().lower()
+    return value if value in {"corner", "notch"} else "corner"
+
+
+def save_background_surface(surface: str) -> str:
+    value = str(surface or "").strip().lower()
+    aliases = {"dock": "corner", "mini_dock": "corner", "top": "notch", "pixelnotch": "notch"}
+    value = aliases.get(value, value)
+    if value not in {"corner", "notch"}:
+        raise ValueError("background surface must be 'corner' or 'notch'")
+    _patch_config(background_surface=value)
+    return value
+
+
 def get_input_device() -> str:
     """Microphone device name, or '' for the system default."""
     return (load_api_keys().get("input_device", "") or "").strip()

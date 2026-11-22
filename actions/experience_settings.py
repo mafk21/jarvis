@@ -26,24 +26,33 @@ def run(params: dict, context: dict | None = None) -> str:
         if callable(reconnect):
             reconnect()
         return f"Presentation set to {profile.personality}, language {profile.language}."
-    raise ValueError("action must be set_incognito or set_presentation")
+    if action == "set_background_surface":
+        from memory.config_manager import save_background_surface
+
+        surface = save_background_surface(str(params.get("surface") or ""))
+        label = "top notch" if surface == "notch" else "bottom-right mini dock"
+        return f"Background Mode will use the {label} from the next time it is opened."
+    raise ValueError("action must be set_incognito, set_presentation, or set_background_surface")
 
 
 TOOL = {
     "name": "experience_settings",
     "description": (
-        "Change presentation or Incognito only when the user explicitly asks. "
+        "Change presentation, Incognito, or the Background Mode surface only when the user explicitly asks. "
         "Use set_presentation for phrases such as 'switch to Sentinel', 'keep it clean', "
         "or 'you can swear around me'. Use set_incognito for explicit private-session requests. "
+        "Use set_background_surface with surface=notch for a PixelNotch-style top-centre notch, "
+        "or surface=corner for the established bottom-right mini dock. "
         "Never infer these preferences from casual language."
     ),
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "action": {"type": "STRING", "description": "set_presentation | set_incognito"},
+            "action": {"type": "STRING", "description": "set_presentation | set_incognito | set_background_surface"},
             "personality": {"type": "STRING", "description": "command | inventor | sentinel | companion"},
             "language": {"type": "STRING", "description": "clean | casual | adult"},
             "enabled": {"type": "BOOLEAN", "description": "Incognito state for set_incognito"},
+            "surface": {"type": "STRING", "description": "notch | corner"},
         },
         "required": ["action"],
     },
