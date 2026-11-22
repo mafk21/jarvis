@@ -167,6 +167,7 @@ class BackgroundDockWidget(QWidget):
         self._raw_state = "LISTENING"
         self._muted = False
         self._audio_level = 0.0
+        self._last_audio_activity = 0.0
         self._phase = 0.0
         self._messages: deque[tuple[str, str]] = deque(maxlen=24)
 
@@ -617,6 +618,8 @@ class BackgroundDockWidget(QWidget):
         except Exception:
             v = 0.0
         self._audio_level = self._audio_level * 0.45 + v * 0.55
+        if v >= 0.045:
+            self._last_audio_activity = time.monotonic()
 
     def append_log(self, raw_line: str) -> None:
         txt = (raw_line or "").strip()
@@ -789,7 +792,11 @@ class BackgroundDockWidget(QWidget):
             p.setBrush(QBrush(shell))
             p.drawPath(body_path)
 
-            if self._muted or st not in {"LISTENING", "SPEAKING"}:
+            actively_listening = (
+                st == "LISTENING"
+                and time.monotonic() - self._last_audio_activity <= 1.2
+            )
+            if self._muted or (st != "SPEAKING" and not actively_listening):
                 # At rest the notch becomes useful instead of decorative. The
                 # existing animation timer repaints it frequently enough to keep
                 # the clock current without adding another background timer.
