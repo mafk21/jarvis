@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 
-def run(params: dict, context: dict | None = None) -> str:
-    context = context or {}
+def experience_settings(parameters=None, player=None, **_kwargs) -> str:
+    params = parameters or {}
     action = str(params.get("action") or "").strip().lower()
-    player = context.get("player")
     if action == "set_incognito":
         from core.session_privacy import set_enabled
         active = set_enabled(bool(params.get("enabled", False)))
@@ -64,5 +63,5 @@ TOOL = {
         },
         "required": ["action"],
     },
-    "run": run,
+    "handler": experience_settings,
 }
